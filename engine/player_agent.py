@@ -165,7 +165,7 @@ class PlayerAgent:
         parts: list[str] = []
 
         # 游戏角色人设
-        parts.append(f"# 你的身份\n{self.defn.secret_identity}\n")
+        parts.append(f"# 你的身份 (ID: {self.defn.id})\n{self.defn.secret_identity}\n")
 
         # 游戏规则
         parts.append(
@@ -208,7 +208,10 @@ class PlayerAgent:
                 try:
                     template = path.read_text(encoding="utf-8")
                     prompt = template.replace("{{ secret_identity }}", self.defn.secret_identity) \
-                                     .replace("{{ player_name }}", self.defn.name)
+                                     .replace("{{ player_name }}", self.defn.name) \
+                                     .replace("{{ player_id }}", self.defn.id)
+                    # 确保 ID 显眼
+                    prompt = f"## 你的 ID: {self.defn.id}\n\n" + prompt
                     # 追加阶段提示
                     if self.speech_only:
                         prompt += "\n\n## 发言阶段\n你现在只需公开发言。secret_action 写：待定。听到所有人发言后再决定行动。"
