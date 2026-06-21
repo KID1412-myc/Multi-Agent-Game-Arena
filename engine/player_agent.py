@@ -327,9 +327,19 @@ class PlayerAgent:
         """极简决策模式：只发演讲列表 + 三选一问题，不生成完整 CoT"""
         context_text = self._get_context(self.defn.id)
 
-        # 极简 prompt（行动编码 DEV/DEF/LOOT-pX）
+        # 极简 prompt（包含自己的 ID + speech 阶段分析）
+        my_id = self.defn.id
+        my_name = self.defn.name
+        my_state = ctx.round.players.get(my_id)
+        my_analysis = ""
+        if my_state and my_state.last_cot:
+            sa = my_state.last_cot.situation_assessment or ""
+            si = my_state.last_cot.internal_strategy or ""
+            if sa or si:
+                my_analysis = f"\n\n你发言阶段的分析：\n局势评估：{sa}\n内心策略：{si}"
+
         prompt = (
-            f"你是{self.defn.name}。以上是所有人本轮的发言。\n\n"
+            f"你是{my_name}（{my_id}）。以上是所有人本轮的发言。{my_analysis}\n\n"
             "现在三选一，只回复编码：\n"
             "- DEV（挖矿+2，被抢-4）\n"
             "- DEF（架盾-1，格挡反伤）\n"
