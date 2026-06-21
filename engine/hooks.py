@@ -36,6 +36,7 @@ class GameHooks:
 
     def __init__(self):
         self.memory = None  # MemoryManager，由引擎注入
+        self.arena = None   # Arena 实例，由引擎注入（新路径使用）
 
     # ── 游戏级钩子 ───────────────────────────────────────────────
 
@@ -55,6 +56,18 @@ class GameHooks:
         可用于：打印奖状、计算最终得分、写入日志等。
         """
         pass
+
+    # ── 新路径：hook 主动编排回合（返回 True = 继续，False = 结束）──
+
+    async def run_round(self, ctx, round_num: int) -> bool:
+        """
+        新路径入口。如果 hook 覆写了此方法，arena 将控制权交给 hook。
+        hook 通过 engine API 自行编排回合流程。
+
+        Returns:
+            True = 继续下一轮，False = 游戏结束
+        """
+        return True  # 默认不做任何事，回退到旧路径
 
     # ── 轮次级钩子 ───────────────────────────────────────────────
 

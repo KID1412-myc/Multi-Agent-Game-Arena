@@ -345,6 +345,7 @@ class Arena:
 
             # 2. 主循环
             round_num = 0
+            winner_id = None
             while True:
                 # 检查停止信号
                 if self._stop_event.is_set():
@@ -383,7 +384,19 @@ class Arena:
                 # 触发 on_round_start 钩子
                 ctx = await self.hooks.on_round_start(ctx, round_num)
 
-                # 收集所有玩家行动
+                # 新路径：hook 自行编排回合（跳过旧逻辑）
+                if type(self.hooks).run_round is not GameHooks.run_round:
+                    keep_going = await self.hooks.run_round(ctx, round_num)
+                    if not keep_going:
+                        winner_id = await self.hooks.check_win_condition(ctx)
+                        break
+                    await self.state_machine.next_phase(ctx)
+                    if self.state_machine.current_phase.value == "game_over":
+                        break
+                    ctx = await self.hooks.on_round_end(ctx, round_num)
+                    continue
+
+                # 收集所有玩家行动（旧路径）
                 player_states = list(ctx.round.players.values())
 
                 # 两阶段模式：先全员发言（完整 CoT）→ 再全员决定行动（极简调用）
@@ -488,6 +501,7 @@ class Arena:
                 ctx = await self.hooks.on_round_end(ctx, round_num)
 
             # 3. 游戏结束
+            winner_id = winner_id if 'winner_id' in locals() else None
             winner = ctx.round.players.get(winner_id) if winner_id else None
 
             # 最终感言：每人发表一句赛后总结
@@ -550,6 +564,7 @@ class Arena:
         # 4. 加载自定义 Hooks，注入 memory
         self.hooks = load_hooks(self.game_id, self.games_dir)
         self.hooks.memory = self.memory
+        self.hooks.arena = self
 
         # 5. 初始化状态机
         self.state_machine = GameStateMachine(self.config)
@@ -599,7 +614,63 @@ class Arena:
             round=round_state,
         )
 
-    # ── 玩家行动收集 ──────────────────────────────────────────────
+    # ── 引擎 API（供 hook 调用）────────────────────────────────────
+
+    async def collect_speeches(self, ctx: GameContext, player_states: list) -> list:
+        """引擎 API：收集全员发言，推送到前端。返回 CoT 列表。"""
+        for agent in self.players.values():
+            agent.speech_only = True
+        result = await self._collect_actions(ctx, player_states)
+        for agent in self.players.values():
+            agent.speech_only = False
+        return result
+
+    async def collect_actions(self, ctx: GameContext, player_states: list) -> list:
+        """引擎 API：收集全员行动，不推送到前端。返回 CoT 列表。"""
+        for agent in self.players.values():
+            agent.action_only = True
+        result = await self._collect_actions(ctx, player_states)
+        for agent in self.players.values():
+            agent.action_only = False
+        return result
+
+    async def dm_judge(self, ctx: GameContext, actions: list) -> DMVerdict:
+        """引擎 API：调用 DM 裁判，返回 verdict。"""
+        verdict = await self.dm.judge(ctx, actions)
+        verdict.round_number = ctx.round.round_number
+        self._round_history.append(verdict)
+        await self._emit(WSEventType.DM_JUDGMENT, {
+            "verdict": verdict.model_dump(mode="json"),
+        })
+        return verdict
+
+    def apply_delta(self, ctx: GameContext, deltas: dict[str, int], resource: str = "gold") -> None:
+        """引擎 API：应用资源变动。"""
+        for pid, delta in deltas.items():
+            p = ctx.round.players.get(pid)
+            if p and p.is_alive and delta != 0:
+                p.resources[resource] = max(0, p.resources.get(resource, 0) + delta)
+
+    def eliminate(self, ctx: GameContext, player_id: str) -> None:
+        """引擎 API：淘汰玩家。"""
+        p = ctx.round.players.get(player_id)
+        if p:
+            p.is_alive = False
+
+    def save_speech_cots(self, ctx: GameContext) -> dict:
+        """引擎 API：保存当前 speech CoT，供 action 阶段合并用。"""
+        return {
+            pid: p.last_cot.model_dump(mode="json") if p.last_cot else {}
+            for pid, p in ctx.round.players.items() if p.is_alive
+        }
+
+    async def emit_state(self, ctx: GameContext) -> None:
+        """引擎 API：推送完整游戏状态到前端。"""
+        await self._emit(WSEventType.STATE_UPDATE, {
+            "ctx": ctx.model_dump(mode="json"),
+        })
+
+    # ── 玩家行动收集（内部）───────────────────────────────────────
 
     async def _collect_actions(
         self, ctx: GameContext, player_states: list[PlayerState]
@@ -642,8 +713,9 @@ class Arena:
             if action:
                 # 判断阶段
                 is_real_speech = action.public_speech.strip() and action.public_speech != "."
-                is_speech_phase = self.config.two_phase and self.hooks.skip_parse
-                is_action_phase = self.config.two_phase and not self.hooks.skip_parse
+                skip = getattr(self.hooks, 'skip_parse', False)
+                is_speech_phase = self.config.two_phase and skip
+                is_action_phase = self.config.two_phase and not skip
 
                 if is_real_speech:
                     self.memory.add_public(player.id, action.public_speech)
@@ -666,7 +738,7 @@ class Arena:
 
                 elif is_action_phase:
                     # Action 阶段：只更新 secret_action（规范化格式），保留 speech 分析
-                    old = self._speech_cots.get(player.id, {})
+                    old = getattr(self, '_speech_cots', {}).get(player.id, {})
                     merged = {
                         "situation_assessment": old.get("situation_assessment", ""),
                         "internal_strategy": old.get("internal_strategy", ""),
