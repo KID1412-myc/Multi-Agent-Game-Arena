@@ -659,10 +659,11 @@ class Arena:
 
     def save_speech_cots(self, ctx: GameContext) -> dict:
         """引擎 API：保存当前 speech CoT，供 action 阶段合并用。"""
-        return {
+        self._speech_cots = {
             pid: p.last_cot.model_dump(mode="json") if p.last_cot else {}
             for pid, p in ctx.round.players.items() if p.is_alive
         }
+        return self._speech_cots
 
     async def emit_state(self, ctx: GameContext) -> None:
         """引擎 API：推送完整游戏状态到前端。"""

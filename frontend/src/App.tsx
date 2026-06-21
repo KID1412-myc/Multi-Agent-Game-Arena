@@ -34,10 +34,13 @@ export default function App() {
     await api(`/api/arena/run?game_id=${encodeURIComponent(selectedGameId)}`);
   }, [selectedGameId, api, setGameStatus]);
 
+  const reset = useArenaStore((s) => s.reset);
+
   const handleStop = useCallback(async () => {
     await api('/api/arena/stop');
     setGameStatus('idle');
-  }, [api, setGameStatus]);
+    reset();
+  }, [api, setGameStatus, reset]);
 
   const handlePause = useCallback(async () => {
     const data = await api('/api/arena/pause');
