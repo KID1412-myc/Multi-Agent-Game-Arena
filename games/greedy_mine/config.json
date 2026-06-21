@@ -23,7 +23,7 @@
     "players": [
         {
             "id": "p1",
-            "name": "赵大锤",
+            "name": "ChatGPT",
             "model": "gpt-5.4",
             "provider": "relay",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
@@ -33,7 +33,7 @@
         },
         {
             "id": "p2",
-            "name": "钱万两",
+            "name": "Claude",
             "model": "claude-sonnet-4-6-r",
             "provider": "relay",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
@@ -43,7 +43,7 @@
         },
         {
             "id": "p3",
-            "name": "孙铁手",
+            "name": "豆包",
             "model": "doubao-seed-2-0-pro-260215",
             "provider": "doubao",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
@@ -53,7 +53,7 @@
         },
         {
             "id": "p4",
-            "name": "李夜鹰",
+            "name": "Deepseek",
             "model": "deepseek-v4-flash",
             "provider": "deepseek",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
@@ -63,7 +63,7 @@
         },
         {
             "id": "p5",
-            "name": "周五爷",
+            "name": "智谱GLM",
             "model": "glm-5.2",
             "provider": "zhipu",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
@@ -73,7 +73,7 @@
         },
         {
             "id": "p6",
-            "name": "吴算盘",
+            "name": "Gemini",
             "model": "gemini-3.5-flash",
             "provider": "relay",
             "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",

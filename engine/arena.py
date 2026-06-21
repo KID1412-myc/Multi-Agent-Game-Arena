@@ -760,15 +760,15 @@ class Arena:
                         "cot": action.model_dump(mode="json"),
                     })
 
+                # 触发 after_player_act 钩子（先填 actions，后续 CoT 推送需要用到）
+                self._ctx = await self.hooks.after_player_act(self._ctx, player, action)
+
                 # 秘密行动进入私密记忆
                 if action.secret_action.strip():
                     self.memory.add_private(
                         player.id,
                         f"🔐 你的秘密行动已提交: {action.secret_action}",
                     )
-
-                # 触发 after_player_act 钩子（无论 speech 是否为空）
-                self._ctx = await self.hooks.after_player_act(self._ctx, player, action)
 
         return await self.turn_manager.collect_player_actions(
             ctx=ctx,

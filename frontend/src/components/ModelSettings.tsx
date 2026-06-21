@@ -86,7 +86,7 @@ export function ModelSettings({ gameId, disabled }: Props) {
 
   return createPortal(
     <div style={B} onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
-      <div style={P}>
+      <div style={P} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>模型配置</h3>
