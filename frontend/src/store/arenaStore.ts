@@ -1,0 +1,94 @@
+// ============================================
+// MAGA Arena — Zustand 全局状态管理
+// ============================================
+
+import { create } from 'zustand';
+import type { GameContext, PlayerState, DMVerdict, CoTOutput } from '../types/arena';
+
+interface ArenaState {
+  // 游戏上下文
+  ctx: GameContext | null;
+  // 连接状态
+  connected: boolean;
+  gameStatus: 'idle' | 'loading' | 'running' | 'paused' | 'round_paused' | 'finished' | 'error';
+  // 发言历史
+  speechLog: { playerId: string; playerName: string; content: string; round: number }[];
+  // CoT 展示控制
+  selectedPlayerId: string | null;
+  showCoT: boolean;
+  // DM 历史
+  verdictHistory: DMVerdict[];
+  // 错误
+  errors: string[];
+
+  // Actions
+  setCtx: (ctx: GameContext) => void;
+  setConnected: (v: boolean) => void;
+  setGameStatus: (s: ArenaState['gameStatus']) => void;
+  addSpeech: (playerId: string, playerName: string, content: string, round: number) => void;
+  setSelectedPlayer: (id: string | null) => void;
+  toggleCoT: () => void;
+  addVerdict: (v: DMVerdict) => void;
+  addError: (e: string) => void;
+  updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
+  reset: () => void;
+}
+
+export const useArenaStore = create<ArenaState>((set) => ({
+  ctx: null,
+  connected: false,
+  gameStatus: 'idle',
+  speechLog: [],
+  selectedPlayerId: null,
+  showCoT: false,
+  verdictHistory: [],
+  errors: [],
+
+  setCtx: (ctx) => set({ ctx }),
+  setConnected: (v) => set({ connected: v }),
+  setGameStatus: (s) => set({ gameStatus: s }),
+
+  addSpeech: (playerId, playerName, content, round) =>
+    set((state) => ({
+      speechLog: [...state.speechLog.slice(-100), { playerId, playerName, content, round }],
+    })),
+
+  setSelectedPlayer: (id) => set({ selectedPlayerId: id, showCoT: id !== null }),
+  toggleCoT: () => set((state) => ({ showCoT: !state.showCoT })),
+
+  addVerdict: (v) =>
+    set((state) => ({
+      verdictHistory: [...state.verdictHistory, v],
+    })),
+
+  addError: (e) =>
+    set((state) => ({
+      errors: [...state.errors.slice(-50), e],
+    })),
+
+  updatePlayer: (playerId, updates) =>
+    set((state) => {
+      if (!state.ctx) return state;
+      const players = { ...state.ctx.round.players };
+      if (players[playerId]) {
+        players[playerId] = { ...players[playerId], ...updates };
+      }
+      return {
+        ctx: {
+          ...state.ctx,
+          round: { ...state.ctx.round, players },
+        },
+      };
+    }),
+
+  reset: () =>
+    set({
+      ctx: null,
+      gameStatus: 'idle',
+      speechLog: [],
+      selectedPlayerId: null,
+      showCoT: false,
+      verdictHistory: [],
+      errors: [],
+    }),
+}));

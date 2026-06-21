@@ -1,0 +1,34 @@
+# 🔴 API 密钥 — 绝对不可提交
+.env
+.env.*
+*.secret
+
+# 依赖
+node_modules/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Logs
+*.log
+
+# Python packaging
+*.egg-info/
+*.egg
+
+# Local notes
+PROJECT_STATUS.md

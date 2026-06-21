@@ -1,0 +1,50 @@
+# ============================================
+# MAGA — .claudeignore
+# ============================================
+# Claude Code 永远不会读取此列表中匹配的文件。
+# 最高优先级：.env 文件绝对不可访问。
+
+# 🔴 最高安全优先级 — API 密钥文件
+.env
+.env.*
+*.env
+credentials.json
+service-account.json
+*secret*
+*api_key*
+
+# 依赖与构建产物
+node_modules/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+dist/
+build/
+*.egg-info/
+
+# IDE 与编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git
+.git/
+
+# 大型二进制
+*.bin
+*.pkl
+*.h5
+*.onnx
+*.safetensors
+*.gguf
+

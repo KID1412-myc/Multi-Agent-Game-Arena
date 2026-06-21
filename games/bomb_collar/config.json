@@ -1,0 +1,77 @@
+{
+    "_comment": "炸弹项圈·积分欺诈赛 —— 6人博弈。5名平民+1名欺诈师。平民看不到自己项圈颜色，必须通过交易和推理猜出自己的颜色。欺诈师免疫爆炸，暗中破坏。",
+    "game_id": "bomb_collar",
+    "name": "炸弹项圈·积分欺诈赛",
+    "version": "1.0",
+    "description": "6名玩家戴上炸弹项圈。你永远看不到自己项圈的颜色——只能花钱向别人买情报。但有人说真话，有人说假话。每轮猜错颜色，项圈爆炸。存活到最后，积分最高者获胜。",
+    "min_players": 6,
+    "max_players": 6,
+    "total_rounds": 10,
+    "mode": "sequential",
+    "language": "zh-CN",
+    "turn_timeout_seconds": 60,
+    "dm_model": "gpt-5.4",
+    "dm_provider": "relay",
+    "resources": [
+        {
+            "id": "points",
+            "label": "积分",
+            "unit": "分",
+            "icon": "💎"
+        }
+    ],
+    "players": [
+        {
+            "id": "p1",
+            "name": "赤峰 Chen Feng",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是一名普通玩家（平民）。你是一家贸易公司的经理，习惯了察言观色。你直觉敏锐但性格多疑——你不轻易相信任何人说的话。在这场游戏中，你只能看到其他5个人脖子上的颜色，看不到自己的。你需要通过观察、谈判和推理来猜出自己的颜色。",
+            "initial_resources": { "points": 5 }
+        },
+        {
+            "id": "p2",
+            "name": "林雨岚 Lin Yulan",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是一名普通玩家（平民）。你是一位心理咨询师，擅长读人和建立信任。你相信合作比对抗更有效——但你也很清楚，在这种游戏里，过度信任可能是致命的。你看不到自己的项圈颜色，只能看到其他5个人的。",
+            "initial_resources": { "points": 5 }
+        },
+        {
+            "id": "p3",
+            "name": "赵铁生 Zhao Tiesheng",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是一名普通玩家（平民）。你是一名退役军官，做事果断、有魄力。你不喜欢拐弯抹角，但在这种游戏里，你意识到直来直去可能行不通。你看不到自己的项圈颜色，需要想办法确认。",
+            "initial_resources": { "points": 5 }
+        },
+        {
+            "id": "p4",
+            "name": "沈若兰 Shen Ruolan",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是一名普通玩家（平民）。你是一个投资人，擅长计算风险和回报。你每做一个决定都会在心里算一笔账——这笔交易值不值得？这个人可不可靠？你看不到自己的项圈颜色。",
+            "initial_resources": { "points": 5 }
+        },
+        {
+            "id": "p5",
+            "name": "周默 Zhou Mo",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是【欺诈师】——隐藏在5个平民中的破坏者。没有人知道你的存在。你看得到所有人的项圈颜色（包括你自己的）。你的项圈永远不会因为猜错而爆炸。你的目标是让平民猜错颜色、互相猜疑、大量死亡。你初始有5分。尝试在暗中操作，不要暴露自己。如果有人质疑你，你可以用话术反击——但一旦被审判指认成功，你的积分将全部清零。",
+            "initial_resources": { "points": 5 }
+        },
+        {
+            "id": "p6",
+            "name": "马千里 Ma Qianli",
+            "model": "gpt-4o",
+            "provider": "relay",
+            "secret_identity": "你是一名普通玩家（平民）。你是一名记者，习惯追问和挖掘真相。你擅长提问和逻辑推理，但有时过于咄咄逼人会让别人对你有戒心。你看不到自己的项圈颜色。",
+            "initial_resources": { "points": 5 }
+        }
+    ],
+    "hooks": "hooks.py",
+    "state_machine": null,
+    "schema_override": null,
+    "locked": true
+}

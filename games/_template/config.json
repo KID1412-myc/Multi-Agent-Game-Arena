@@ -1,0 +1,40 @@
+{
+    "_comment": "💡 如果用中转站，把所有 provider 改为 \"relay\"，dm_provider 也改为 \"relay\"。只需设置 RELAY_API_KEY + RELAY_API_BASE。",
+    "game_id": "my_game",
+    "name": "我的新游戏",
+    "version": "1.0",
+    "description": "在这里描述你的游戏规则和世界观",
+    "min_players": 2,
+    "max_players": 8,
+    "total_rounds": 10,
+    "mode": "sequential",
+    "language": "zh-CN",
+    "turn_timeout_seconds": 60,
+    "dm_model": "gpt-5.4",
+    "dm_provider": "openai",
+    "resources": [
+        { "id": "gold", "label": "金币", "unit": "枚", "icon": "🪙" },
+        { "id": "power", "label": "权力", "unit": "点", "icon": "⚡" }
+    ],
+    "players": [
+        {
+            "id": "p1",
+            "name": "玩家A",
+            "model": "gpt-5.4",
+            "provider": "openai",
+            "secret_identity": "你是一个商业帝国的 CEO，目标是垄断市场。",
+            "initial_resources": { "gold": 100, "power": 50 }
+        },
+        {
+            "id": "p2",
+            "name": "玩家B",
+            "model": "claude-sonnet-4-6",
+            "provider": "anthropic",
+            "secret_identity": "你是一个新兴创业公司的创始人，目标是推翻垄断者。",
+            "initial_resources": { "gold": 80, "power": 60 }
+        }
+    ],
+    "hooks": null,
+    "state_machine": null,
+    "schema_override": null
+}
