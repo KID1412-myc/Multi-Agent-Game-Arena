@@ -11,6 +11,7 @@ interface ArenaState {
   // 连接状态
   connected: boolean;
   gameStatus: 'idle' | 'loading' | 'running' | 'paused' | 'round_paused' | 'finished' | 'error';
+  gameOverPayload: { winner_id?: string; winner_name?: string } | null;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -25,6 +26,7 @@ interface ArenaState {
   setCtx: (ctx: GameContext) => void;
   setConnected: (v: boolean) => void;
   setGameStatus: (s: ArenaState['gameStatus']) => void;
+  setGameOverPayload: (p: { winner_id?: string; winner_name?: string } | null) => void;
   addSpeech: (playerId: string, playerName: string, content: string, round: number) => void;
   setSelectedPlayer: (id: string | null) => void;
   toggleCoT: () => void;
@@ -38,6 +40,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
   ctx: null,
   connected: false,
   gameStatus: 'idle',
+  gameOverPayload: null,
   speechLog: [],
   selectedPlayerId: null,
   showCoT: false,
@@ -47,6 +50,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
   setCtx: (ctx) => set({ ctx }),
   setConnected: (v) => set({ connected: v }),
   setGameStatus: (s) => set({ gameStatus: s }),
+  setGameOverPayload: (p) => set({ gameOverPayload: p }),
 
   addSpeech: (playerId, playerName, content, round) =>
     set((state) => ({
@@ -85,6 +89,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
     set({
       ctx: null,
       gameStatus: 'idle',
+      gameOverPayload: null,
       speechLog: [],
       selectedPlayerId: null,
       showCoT: false,

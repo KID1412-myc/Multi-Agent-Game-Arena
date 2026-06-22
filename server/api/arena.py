@@ -210,3 +210,15 @@ async def auto_mode():
 
     _current_arena.request_auto_mode()
     return {"status": "auto", "message": "已切换为自动模式"}
+
+
+@router.get("/state")
+async def get_state():
+    """获取当前游戏状态——前端断线重连时恢复界面"""
+    global _current_arena
+    if _current_arena is None or _current_arena._ctx is None:
+        return {"status": "no_game", "ctx": None}
+    return {
+        "status": "running",
+        "ctx": _current_arena._ctx.model_dump(mode="json"),
+    }

@@ -39,7 +39,7 @@ class MemoryManager:
     └─────────────────────────────────────────────────────┘
     """
 
-    def __init__(self, global_hot_window: int = 3, player_hot_window: int = 5):
+    def __init__(self, global_hot_window: int = 3, player_hot_window: int = 120):
         """
         Args:
             global_hot_window: 全局热记忆保留最近几轮

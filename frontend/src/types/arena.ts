@@ -38,6 +38,9 @@ export interface PlayerState {
   last_public_speech: string;
   last_cot: CoTOutput | null;
   private_notebook: string[];
+  color_tag?: string;
+  fraud_tag?: string;
+  see_tag?: string;
 }
 
 export interface DMVerdict {

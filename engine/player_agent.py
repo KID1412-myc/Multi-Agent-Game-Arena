@@ -92,6 +92,7 @@ class PlayerAgent:
         self._game_id = game_id
         self.speech_only: bool = False  # True = 只发言不决定行动
         self.action_only: bool = False  # True = 极简决策模式（只问三选一，不走 CoT）
+        self.quick_action_prompt: str | None = None  # 游戏自定义 action 提示（替代 DEV/DEF/LOOT）
         self._history: list[dict[str, str]] = []  # 该玩家最近的消息历史
 
     # ── 公共 API ─────────────────────────────────────────────────
@@ -130,7 +131,7 @@ class PlayerAgent:
                 messages=messages,
                 model=self.defn.model,
                 provider=self.defn.provider,
-                max_tokens=8192,
+                max_tokens=16384,
                 temperature=0.8,
                 json_mode=True,
             )
@@ -256,9 +257,10 @@ class PlayerAgent:
 
         容错策略：
         1. 先尝试直接解析整段 JSON
-        2. 如果失败，尝试提取 ```json ... ``` 代码块
-        3. 如果仍失败，尝试用正则提取关键字段
-        4. 都失败则抛出异常，由 act() 兜底
+        2. 尝试从文本中提取 { ... } JSON 对象（处理"闲聊+JSON"混合输出）
+        3. 如果失败，尝试提取 ```json ... ``` 代码块
+        4. 如果仍失败，尝试用正则提取关键字段
+        5. 都失败则抛出异常，由 act() 兜底
         """
         text = raw_text.strip()
 
@@ -269,7 +271,16 @@ class PlayerAgent:
         except (json.JSONDecodeError, Exception):
             pass
 
-        # 策略 2: 提取 ```json 代码块
+        # 策略 2: 从文本中提取 { ... } JSON 对象（处理模型在 JSON 前后写闲聊）
+        json_object = self._extract_json_object(text)
+        if json_object:
+            try:
+                data = json.loads(json_object)
+                return CoTOutput(**data)
+            except (json.JSONDecodeError, Exception):
+                pass
+
+        # 策略 3: 提取 ```json 代码块
         json_block = self._extract_json_block(text)
         if json_block:
             try:
@@ -278,14 +289,43 @@ class PlayerAgent:
             except (json.JSONDecodeError, Exception):
                 pass
 
-        # 策略 3: 正则提取关键字段
+        # 策略 4: 正则提取关键字段
         try:
             return self._regex_extract_cot(text)
         except Exception:
             pass
 
-        # 策略 4: 失败
+        # 策略 5: 失败
         raise ValueError(f"无法解析 CoT JSON，原始输出: {text[:500]}...")
+
+    def _extract_json_object(self, text: str) -> Optional[str]:
+        """从包含非 JSON 文本的混合输出中提取第一个完整 JSON 对象"""
+        start = text.find('{')
+        if start == -1:
+            return None
+        # 从第一个 { 开始，找到匹配的 }
+        depth = 0
+        in_string = False
+        escape = False
+        for i, ch in enumerate(text[start:], start):
+            if escape:
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i+1]
+        return None
 
     def _extract_json_block(self, text: str) -> Optional[str]:
         """从文本中提取 ```json ... ``` 代码块"""
@@ -304,10 +344,10 @@ class PlayerAgent:
         fields: dict[str, str] = {}
 
         patterns = {
-            "situation_assessment": r'"situation_assessment"\s*:\s*"([^"]*)"',
-            "internal_strategy": r'"internal_strategy"\s*:\s*"([^"]*)"',
-            "public_speech": r'"public_speech"\s*:\s*"([^"]*)"',
-            "secret_action": r'"secret_action"\s*:\s*"([^"]*)"',
+            "situation_assessment": r'"(?:situation_assessment|situation_analysis|analysis)"\s*:\s*"([^"]*)"',
+            "internal_strategy": r'"(?:internal_strategy|inner_strategy|strategy|internal_plan)"\s*:\s*"([^"]*)"',
+            "public_speech": r'"(?:public_speech|speech|public_statement|statement)"\s*:\s*"([^"]*)"',
+            "secret_action": r'"(?:secret_action|action|hidden_action)"\s*:\s*"([^"]*)"',
         }
 
         for field_name, pattern in patterns.items():
@@ -330,23 +370,28 @@ class PlayerAgent:
         """极简决策模式：只发演讲列表 + 三选一问题，不生成完整 CoT"""
         context_text = self._get_context(self.defn.id)
 
-        # 极简 prompt（包含自己的 ID + speech 阶段分析）
-        my_id = self.defn.id
-        my_name = self.defn.name
-        my_state = ctx.round.players.get(my_id)
-        my_analysis = ""
+        # 取自己之前的分析（措辞避免让模型以为行动已提交）
+        my_state = ctx.round.players.get(self.defn.id)
+        prev_thought = ""
         if my_state and my_state.last_cot:
             sa = my_state.last_cot.situation_assessment or ""
             si = my_state.last_cot.internal_strategy or ""
             if sa or si:
-                my_analysis = f"\n\n你发言阶段的分析：\n局势评估：{sa}\n内心策略：{si}"
+                prev_thought = f"\n\n你之前的思考：\n{sa}\n{si}"
+
+        if self.quick_action_prompt:
+            action_instruction = self.quick_action_prompt
+        else:
+            action_instruction = (
+                "现在是决定行动的阶段。只回复一个编码：\n"
+                "DEV\n"
+                "DEF\n"
+                f"LOOT-p1 / LOOT-p2 / LOOT-p3 / LOOT-p4 / LOOT-p5 / LOOT-p6"
+            )
 
         prompt = (
-            f"你是{my_name}（{my_id}）。以上是所有人本轮的发言。{my_analysis}\n\n"
-            "现在三选一，只回复编码：\n"
-            "- DEV（挖矿+2，被抢-4）\n"
-            "- DEF（架盾-1，格挡反伤）\n"
-            "- LOOT-p1 / LOOT-p2 / LOOT-p3 / LOOT-p4 / LOOT-p5 / LOOT-p6（抢指定玩家，+5/-1/-3）"
+            f"你的ID: {self.defn.id}。以上是本轮所有人的发言。{prev_thought}\n\n"
+            f"{action_instruction}"
         )
 
         messages = [
@@ -359,17 +404,35 @@ class PlayerAgent:
                 messages=messages,
                 model=self.defn.model,
                 provider=self.defn.provider,
-                max_tokens=1024,
-                temperature=0.0,
+                max_tokens=4096,
+                temperature=0.1,
                 json_mode=False,
             )
             raw = response.content.strip()
-            # 取最后一行（有些模型会先解释再输出行动）
-            secret_action = raw.split("\n")[-1].strip() if raw else "发育"
-            if not secret_action:
-                secret_action = "发育"
+            # 取最后一行，去掉多余符号
+            secret_action = raw.split("\n")[-1].strip().rstrip("。，.!,；;：:") if raw else ""
+            if self.quick_action_prompt:
+                # 通用模式：取回复中最后一段有意义的内容
+                if not secret_action or len(secret_action) > 20:
+                    for line in reversed(raw.split("\n")):
+                        line = line.strip().rstrip("。，.!,；;：:)\"' ")
+                        if line and len(line) <= 10:
+                            secret_action = line
+                            break
+                if not secret_action:
+                    secret_action = ""
+            else:
+                # 贪婪矿场模式
+                if not secret_action or len(secret_action) > 20:
+                    for line in raw.split("\n"):
+                        line = line.strip().rstrip("。，.!,；;：:")
+                        if line in ("DEV", "DEF") or line.startswith("LOOT-p"):
+                            secret_action = line
+                            break
+                if not secret_action:
+                    secret_action = "DEV"
         except Exception:
-            secret_action = "发育"
+            secret_action = ""
 
         # 返回占位 CoT（满足最小长度校验，frontend 不显示）
         return CoTOutput(

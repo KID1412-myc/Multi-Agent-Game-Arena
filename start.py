@@ -83,7 +83,7 @@ def main():
         subprocess.run(
             [sys.executable, "-m", "pip", "install",
              "pydantic", "httpx", "jinja2", "pyyaml", "fastapi",
-             "uvicorn", "websockets", "python-dotenv", "-q"],
+             "uvicorn", "websockets", "python-dotenv", "openai", "-q"],
             check=True,
         )
         print("  Done")
@@ -125,10 +125,22 @@ def main():
     time.sleep(5)
     webbrowser.open("http://localhost:5173")
 
+    # 获取局域网 IP
+    lan_ip = ""
+    try:
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        lan_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
     print()
     print("  ============================================")
     print("    Backend : http://localhost:8000")
     print("    Frontend: http://localhost:5173")
+    if lan_ip:
+        print(f"    🌐 局域网: http://{lan_ip}:5173")
     print()
     print("    Close the two MAGA windows to stop.")
     print("    Or press Ctrl+C here + close the windows.")

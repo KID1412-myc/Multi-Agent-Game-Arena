@@ -21,7 +21,7 @@ MODELS_FILE = Path("config/models.json")
 async def list_models():
     """列出所有可用模型（按厂商分组）"""
     if not MODELS_FILE.exists():
-        return {"models": {}, "providers": ["relay", "openai", "anthropic", "gemini", "deepseek"]}
+        return {"models": {}, "providers": ["relay", "openai", "anthropic", "gemini", "deepseek", "doubao", "zhipu", "qwen"]}
 
     with open(MODELS_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -66,5 +66,6 @@ async def list_providers():
         {"id": "doubao", "name": "豆包 (火山引擎)", "description": "豆包 Pro / Lite"},
         {"id": "minimax", "name": "MiniMax", "description": "Abab7 系列"},
         {"id": "zhipu", "name": "智谱 GLM", "description": "GLM-4 Plus / Flash"},
+        {"id": "qwen", "name": "通义千问 Qwen", "description": "Qwen3.7 Plus / Max"},
     ]
     return {"providers": providers}

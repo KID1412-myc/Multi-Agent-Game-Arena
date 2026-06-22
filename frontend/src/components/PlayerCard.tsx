@@ -15,6 +15,11 @@ export function PlayerCard({ player, resources }: Props) {
   const isDead = !player.is_alive;
   const cot = player.last_cot;
 
+  // 游戏标签（炸弹项圈等游戏直接设 PlayerState 字段）
+  const colorTag = player.color_tag || '';
+  const fraudTag = player.fraud_tag || '';
+  const seeTag = player.see_tag || '';
+
   return (
     <motion.div
       onClick={() => setSelectedPlayer(isSelected ? null : player.id)}
@@ -40,6 +45,22 @@ export function PlayerCard({ player, resources }: Props) {
           fontSize: 11, fontWeight: 600, color: '#1a1a1a', flex: 1,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{player.name}</span>
+        {colorTag && (
+          <span style={{ fontSize: 9, fontWeight: 600, flexShrink: 0,
+            color: colorTag === '红' ? '#ef4444' : colorTag === '蓝' ? '#3b82f6' : '#10b981',
+            background: '#f5f5f5', padding: '1px 4px', borderRadius: 3 }}>
+            {colorTag}
+          </span>
+        )}
+        {fraudTag && (
+          <span style={{ fontSize: 9, fontWeight: 600, color: '#ef4444', flexShrink: 0,
+            background: '#fef2f2', padding: '1px 4px', borderRadius: 3 }}>
+            {fraudTag}
+          </span>
+        )}
+        {seeTag && (
+          <span style={{ fontSize: 8, color: '#aaa', flexShrink: 0 }}>{seeTag}</span>
+        )}
         {isThinking && <span style={{ fontSize: 9, color: '#f59e0b', flexShrink: 0 }}>思考中</span>}
         <span style={{ fontSize: 9, color: '#999', fontFamily: 'monospace', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>{player.model}</span>
       </div>

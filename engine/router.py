@@ -58,6 +58,7 @@ DEFAULT_BASE_URLS: dict[ModelProvider, str] = {
     ModelProvider.DOUBAO:           "https://ark.cn-beijing.volces.com/api/v3",
     ModelProvider.MINIMAX:          "https://api.minimax.chat/v1",
     ModelProvider.ZHIPU:            "https://open.bigmodel.cn/api/paas/v4",
+    ModelProvider.QWEN:             "https://dashscope.aliyuncs.com/compatible-mode/v1",
     ModelProvider.OPENAI_COMPATIBLE: "http://localhost:11434/v1",
     ModelProvider.RELAY:             "https://your-relay-api.com/v1",
 }
@@ -71,6 +72,7 @@ API_KEY_ENV_VARS: dict[ModelProvider, str] = {
     ModelProvider.DOUBAO:           "DOUBAO_API_KEY",
     ModelProvider.MINIMAX:          "MINIMAX_API_KEY",
     ModelProvider.ZHIPU:            "ZHIPU_API_KEY",
+    ModelProvider.QWEN:             "QWEN_API_KEY",
     ModelProvider.OPENAI_COMPATIBLE: "OPENAI_API_KEY",
     ModelProvider.RELAY:            "RELAY_API_KEY",
 }
@@ -90,6 +92,7 @@ DEFAULT_MODELS: dict[ModelProvider, str] = {
     ModelProvider.DOUBAO:    "doubao-pro-32k",
     ModelProvider.MINIMAX:   "abab7-chat",
     ModelProvider.ZHIPU:     "glm-4-plus",
+    ModelProvider.QWEN:      "qwen3.7-plus",
     ModelProvider.RELAY:     "gpt-5.4",
 }
 
@@ -240,6 +243,7 @@ class ModelRouter:
             ModelProvider.DOUBAO:            self._call_openai,       # 豆包兼容 OpenAI 协议
             ModelProvider.MINIMAX:           self._call_openai,       # MiniMax 兼容 OpenAI 协议
             ModelProvider.ZHIPU:             self._call_openai,       # 智谱兼容 OpenAI 协议
+            ModelProvider.QWEN:              self._call_openai,       # 通义千问兼容 OpenAI 协议
             ModelProvider.OPENAI_COMPATIBLE: self._call_openai,
             ModelProvider.RELAY:             self._call_openai,       # 中转站走 OpenAI 协议
         }
@@ -308,12 +312,18 @@ class ModelRouter:
 
         latency = (time.monotonic() - t0) * 1000
 
-        choice = completion.choices[0]
-        content = choice.message.content or ""
-        finish_reason = choice.finish_reason or "stop"
-
-        input_tokens = completion.usage.prompt_tokens if completion.usage else 0
-        output_tokens = completion.usage.completion_tokens if completion.usage else 0
+        if isinstance(completion, str):
+            # Relay 返回纯文本而非 OpenAI 对象，直接当 content 用
+            content = completion
+            input_tokens = 0
+            output_tokens = 0
+            finish_reason = "error"
+        else:
+            choice = completion.choices[0]
+            content = choice.message.content if hasattr(choice, 'message') and choice.message else ""
+            finish_reason = getattr(choice, 'finish_reason', 'stop') or "stop"
+            input_tokens = completion.usage.prompt_tokens if completion.usage else 0
+            output_tokens = completion.usage.completion_tokens if completion.usage else 0
 
         return ModelResponse(
             content=content,

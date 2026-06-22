@@ -28,7 +28,7 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from engine.schema import (
     CoTOutput,
@@ -343,16 +343,45 @@ class DMInterface:
             except (json.JSONDecodeError, Exception):
                 pass
 
-        # 策略 3: 尝试找第一个 { 到最后一个 }
-        brace_match = re.search(r"\{[\s\S]*\}", text)
-        if brace_match:
+        # 策略 3: 精确括号匹配提取 JSON 对象（处理"文字{json}文字"混合输出）
+        json_object = self._extract_json_object(text)
+        if json_object:
             try:
-                data = json.loads(brace_match.group(0))
+                data = json.loads(json_object)
                 return self._to_verdict(data)
             except (json.JSONDecodeError, Exception):
                 pass
 
         raise ValueError(f"无法解析 DM 返回的 JSON")
+
+    @staticmethod
+    def _extract_json_object(text: str) -> Optional[str]:
+        """从混合文本中提取第一个完整 JSON 对象（平衡括号追踪）"""
+        start = text.find('{')
+        if start == -1:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for i, ch in enumerate(text[start:], start):
+            if escape:
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i+1]
+        return None
 
     def _to_verdict(self, data: dict[str, Any]) -> DMVerdict:
         """将原始 dict 转换为 DMVerdict"""

@@ -11,6 +11,9 @@ export function PublicBoard() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showAll, setShowAll] = useState(false);
 
+  // 从 ctx 中提取 public_log（游戏事件如赃款公布、审判等）
+  const publicLog = ctx?.round?.public_log || [];
+
   useEffect(() => {
     if (scrollRef.current && !showAll) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -60,8 +63,31 @@ export function PublicBoard() {
         </div>
       </div>
 
+      {/* 固定事件栏：最新游戏事件（赃款、谈判结果）不滚动 */}
+      <div style={{
+        flexShrink: 0, padding: '4px 8px', marginBottom: 4,
+        background: publicLog.length > 0 ? '#fefce8' : '#f9fafb',
+        borderLeft: `3px solid ${publicLog.length > 0 ? '#f59e0b' : '#ddd'}`,
+        borderRadius: 4, fontSize: 12, fontWeight: 600,
+        color: publicLog.length > 0 ? '#92400e' : '#999',
+      }}>
+        {publicLog.length > 0 ? publicLog[publicLog.length - 1] : '等待开局...'}
+      </div>
+
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', fontSize: 12, lineHeight: 1.5, minHeight: 0 }}>
-        {speechLog.length === 0 ? (
+        {/* 历史事件（可滚动）*/}
+        {publicLog.length > 1 && (
+          <div style={{ marginBottom: 8 }}>
+            {publicLog.slice(0, -1).reverse().map((entry, i) => (
+              <div key={`pl-${i}`} style={{
+                padding: '2px 8px', marginBottom: 1, fontSize: 10, color: '#a16207', opacity: 0.7,
+              }}>
+                {entry}
+              </div>
+            ))}
+          </div>
+        )}
+        {speechLog.length === 0 && publicLog.length === 0 ? (
           <div style={{ color: '#ccc', textAlign: 'center', padding: 32 }}>等待玩家发言...</div>
         ) : (
           Object.entries(grouped).map(([round, entries]) => (

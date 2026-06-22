@@ -67,7 +67,8 @@ class GreedyMineHooks(GameHooks):
             if p and p.is_alive:
                 tname = ctx.round.players[target].name if target else ""
                 logger.info(f"  {p.name}: {act}" + (f" → {tname}" if target else ""))
-        await a.dm_judge(ctx, [])
+        dm_actions = [(p, p.last_cot) for p in ctx.round.players.values() if p.last_cot]
+        await a.dm_judge(ctx, dm_actions)
 
         # ── 阶段 4：结算 ──
         deltas = self._apply_matrix(ctx)
@@ -76,6 +77,17 @@ class GreedyMineHooks(GameHooks):
         for pid, p in ctx.round.players.items():
             if p.is_alive and p.resources.get("gold", 0) <= 0:
                 a.eliminate(ctx, pid)
+                logger.info(f"  淘汰: {p.name}")
+
+        # 末位淘汰（第 4 轮起）
+        if round_num >= 4:
+            alive = [(pid, p) for pid, p in ctx.round.players.items() if p.is_alive]
+            if len(alive) > 1:
+                min_gold = min(p.resources.get("gold", 0) for _, p in alive)
+                for pid, p in alive:
+                    if p.resources.get("gold", 0) == min_gold:
+                        a.eliminate(ctx, pid)
+                        logger.info(f"  末位淘汰 ({round_num}轮): {p.name}")
 
         # ── 阶段 5：推送状态 ──
         for pid, p in ctx.round.players.items():
@@ -84,6 +96,8 @@ class GreedyMineHooks(GameHooks):
                     "secret_action": self._fmt_action(pid, ctx),
                 })
         await a.emit_state(ctx)
+        if round_num >= ctx.game_config.total_rounds:
+            return False
         return True
 
     # ============================================================
@@ -100,7 +114,8 @@ class GreedyMineHooks(GameHooks):
             return alive[0].id
         if ctx.round.round_number >= ctx.game_config.total_rounds:
             golds = [p.resources.get("gold", 0) for p in alive]
-            return [p.id for p in alive if p.resources.get("gold", 0) == max(golds)][0]
+            winners = [p.id for p in alive if p.resources.get("gold", 0) == max(golds)]
+            return ",".join(winners) if winners else None
         return None
 
     # ============================================================
@@ -154,7 +169,8 @@ class GreedyMineHooks(GameHooks):
             if act == LOOT and target:
                 raiders.append((pid, target))
                 counts[target] = counts.get(target, 0) + 1
-        mass_raided = {t for t, c in counts.items() if c >= 3}
+        alive_count = sum(1 for p in ctx.round.players.values() if p.is_alive)
+        mass_raided = {t for t, c in counts.items() if c >= alive_count // 2}
 
         for pid, (act, target) in self.actions.items():
             p = ctx.round.players.get(pid)
@@ -182,6 +198,7 @@ class GreedyMineHooks(GameHooks):
                 elif target_act == LOOT:
                     deltas[pid] += LOOT_VS_LOOT
                 for rid in raiders_on_me:
-                    deltas[pid] += LOOT_VS_LOOT
+                    if rid != target:
+                        deltas[pid] += LOOT_VS_LOOT
 
         return deltas

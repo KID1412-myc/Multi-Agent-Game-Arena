@@ -45,7 +45,8 @@ export function ModelSettings({ gameId, disabled }: Props) {
 
   useEffect(() => {
     if (open && gameId) { setMsg(''); fetch(`/api/games/${gameId}/config`).then(r => r.json()).then(d => setCfg(d)).catch(() => setMsg('加载失败')); }
-  }, [open, gameId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const save = async () => {
     if (!cfg || !gameId) return;

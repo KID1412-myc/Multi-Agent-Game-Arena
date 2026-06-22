@@ -30,6 +30,7 @@ class ModelProvider(str, Enum):
     DOUBAO = "doubao"
     MINIMAX = "minimax"
     ZHIPU = "zhipu"
+    QWEN = "qwen"
     # 通用兼容 OpenAI 协议的厂商（本地模型 / vLLM / Ollama 等）
     OPENAI_COMPATIBLE = "openai_compatible"
     # 中转站模式：统一 API Base + 单一 Key，模型名自由指定
@@ -223,6 +224,9 @@ class PlayerState(BaseModel):
         default_factory=list,
         description="私密本子：DM 塞给该玩家的秘密消息历史"
     )
+    color_tag: str = ""
+    fraud_tag: str = ""
+    see_tag: str = ""
 
 
 class RoundState(BaseModel):

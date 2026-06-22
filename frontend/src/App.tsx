@@ -11,9 +11,8 @@ export default function App() {
   const { connected } = useWebSocket();
   const gameStatus = useArenaStore((s) => s.gameStatus);
   const setGameStatus = useArenaStore((s) => s.setGameStatus);
-  const winnerId = useArenaStore((s) => s.ctx?.dm_last_verdict?.winner_id);
-  const players = useArenaStore((s) => s.ctx?.round.players);
-  const winnerName = winnerId && players ? players[winnerId]?.name : null;
+  const gameOverPayload = useArenaStore((s) => s.gameOverPayload);
+  const winnerName = gameOverPayload?.winner_name || null;
 
   const api = useCallback(async (path: string) => {
     try {
@@ -90,9 +89,13 @@ export default function App() {
         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9999,
                       background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center',
                       border: '2px solid #f59e0b', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>winner</div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 4 }}>Game Over</h2>
-          <p style={{ fontSize: 15, color: '#666' }}>Winner: <span style={{ fontWeight: 700, color: '#f59e0b' }}>{winnerName}</span></p>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 4 }}>游戏结束</h2>
+          <p style={{ fontSize: 15, color: '#666' }}>胜者：<span style={{ fontWeight: 700, color: '#f59e0b' }}>{winnerName}</span></p>
+          <button onClick={() => useArenaStore.getState().setGameStatus('idle')}
+            style={{ marginTop: 12, padding: '4px 16px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#666' }}>
+            关闭
+          </button>
         </div>
       )}
 

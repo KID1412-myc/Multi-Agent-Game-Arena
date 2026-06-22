@@ -42,7 +42,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
         {connected
-          ? <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#4ade80', fontSize: 11 }}><Wifi size={12} /> LIVE</span>
+          ? <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#4ade80', fontSize: 11 }}><Wifi size={12} /> 在线</span>
           : <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#f87171', fontSize: 11 }}><WifiOff size={12} /> 离线</span>
         }
 

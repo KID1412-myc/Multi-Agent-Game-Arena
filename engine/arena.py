@@ -389,9 +389,24 @@ class Arena:
                     keep_going = await self.hooks.run_round(ctx, round_num)
                     if not keep_going:
                         winner_id = await self.hooks.check_win_condition(ctx)
+                        if winner_id:
+                            wids = winner_id.split(",")
+                            wnames = [ctx.round.players[wid].name if wid in ctx.round.players else wid for wid in wids]
+                            await self._emit(WSEventType.GAME_OVER, {
+                                "winner_id": winner_id,
+                                "winner_name": "、".join(wnames),
+                            })
                         break
                     await self.state_machine.next_phase(ctx)
                     if self.state_machine.current_phase.value == "game_over":
+                        winner_id = await self.hooks.check_win_condition(ctx)
+                        if winner_id:
+                            wids = winner_id.split(",")
+                            wnames = [ctx.round.players[wid].name if wid in ctx.round.players else wid for wid in wids]
+                            await self._emit(WSEventType.GAME_OVER, {
+                                "winner_id": winner_id,
+                                "winner_name": "、".join(wnames),
+                            })
                         break
                     ctx = await self.hooks.on_round_end(ctx, round_num)
                     continue
@@ -486,9 +501,12 @@ class Arena:
                     winner_id = verdict.winner_id
 
                 if winner_id:
-                    logger.info(f"🏆 游戏结束！胜者: {winner_id}")
+                    wids = winner_id.split(",")
+                    wnames = [ctx.round.players[wid].name if wid in ctx.round.players else wid for wid in wids]
+                    logger.info(f"🏆 游戏结束！胜者: {', '.join(wnames)}")
                     await self._emit(WSEventType.GAME_OVER, {
                         "winner_id": winner_id,
+                        "winner_name": "、".join(wnames),
                     })
                     break
 
@@ -504,21 +522,23 @@ class Arena:
             winner_id = winner_id if 'winner_id' in locals() else None
             winner = ctx.round.players.get(winner_id) if winner_id else None
 
-            # 最终感言：每人发表一句赛后总结
+            # 最终感言：全员发表赛后总结（含淘汰者复活发言）
             if self.config.epilogue and winner_id:
                 wname = winner.name if winner else winner_id
                 for agent in self.players.values():
                     agent.speech_only = True
                 for pid in list(self.players.keys()):
                     p = ctx.round.players.get(pid)
-                    if p and p.is_alive:
+                    if p:
+                        tag = "（已淘汰）" if not p.is_alive else ""
                         self.memory.add_private(pid,
-                            f"## 游戏结束\n胜者是 {wname}。"
+                            f"## 游戏结束\n胜者是 {wname}。{tag}\n"
                             f"请发表你的最终感言——对这场博弈的总结、对赢家的评价、或对其他玩家的喊话。"
                         )
-                        p.last_cot = None  # 清掉旧的，让新感言独立显示
-                alive = [s for s in ctx.round.players.values() if s.is_alive]
-                await self._collect_actions(ctx, alive)
+                        p.last_cot = None
+                        p.is_alive = True  # 临时复活以参与发言
+                all_players = [s for s in ctx.round.players.values()]
+                await self._collect_actions(ctx, all_players)
                 for agent in self.players.values():
                     agent.speech_only = False
 
@@ -559,7 +579,7 @@ class Arena:
         self.router = ModelRouter()
 
         # 3. 初始化记忆管理器
-        self.memory = MemoryManager(global_hot_window=3, player_hot_window=5)
+        self.memory = MemoryManager(global_hot_window=3, player_hot_window=120)
 
         # 4. 加载自定义 Hooks，注入 memory
         self.hooks = load_hooks(self.game_id, self.games_dir)
@@ -618,6 +638,7 @@ class Arena:
 
     async def collect_speeches(self, ctx: GameContext, player_states: list) -> list:
         """引擎 API：收集全员发言，推送到前端。返回 CoT 列表。"""
+        self.hooks.skip_parse = True
         for agent in self.players.values():
             agent.speech_only = True
         result = await self._collect_actions(ctx, player_states)
@@ -627,6 +648,7 @@ class Arena:
 
     async def collect_actions(self, ctx: GameContext, player_states: list) -> list:
         """引擎 API：收集全员行动，不推送到前端。返回 CoT 列表。"""
+        self.hooks.skip_parse = False
         for agent in self.players.values():
             agent.action_only = True
         result = await self._collect_actions(ctx, player_states)
@@ -671,6 +693,79 @@ class Arena:
             "ctx": ctx.model_dump(mode="json"),
         })
 
+    async def private_msg(self, player_id: str, text: str) -> None:
+        """引擎 API：向单个玩家发送私密信息。"""
+        if self.memory:
+            self.memory.add_private(player_id, text)
+
+    async def vote(self, title: str, ctx: GameContext, targets: list,
+                   prompt: str = "") -> dict:
+        """
+        引擎 API：发起投票。向所有存活玩家私密询问投票意向。
+        返回 {"passed": bool, "target": str|None, "votes": {pid: choice}}
+        """
+        alive = [(pid, p) for pid, p in ctx.round.players.items() if p.is_alive]
+        if not alive:
+            return {"passed": False, "target": None, "votes": {}}
+
+        threshold = len(alive) // 2 + 1  # 过半
+        ballot: dict[str, str] = {}
+
+        for pid, p in alive:
+            target_list = "\n".join(
+                f"- {t}" if isinstance(t, str) else f"- {t.id} {t.name}"
+                for t in targets)
+            vote_prompt = "## " + title + "\n" + prompt + "\n\n可选目标（回复ID或弃权）：\n" + target_list
+            self.memory.add_private(pid, vote_prompt)
+
+            agent = self.players.get(pid)
+            if agent:
+                try:
+                    from engine.schema import ModelMessage
+                    msgs = [
+                        ModelMessage(role="system", content=f"投票：{title}。只回复目标ID或弃权。"),
+                        ModelMessage(role="user", content=vote_prompt),
+                    ]
+                    resp = await self.router.chat(
+                        messages=msgs, model=agent.defn.model,
+                        provider=agent.defn.provider, max_tokens=20, temperature=0.0,
+                        json_mode=False,
+                    )
+                    choice = resp.content.strip()
+                except Exception:
+                    choice = "弃权"
+                # 归一化投票：从各种回复中提取 p1-p6
+                ballot[pid] = self._normalize_vote(choice)
+
+        # 计票
+        tally: dict[str, int] = {}
+        for choice in ballot.values():
+            if choice and choice != "弃权":
+                tally[choice] = tally.get(choice, 0) + 1
+
+        winner = max(tally, key=tally.get) if tally else None
+        passed = tally.get(winner, 0) >= threshold if winner else False
+
+        # 公开投票结果
+        result_text = f"投票结果：{'通过' if passed else '未通过'}（{tally.get(winner,0)}/{len(alive)}）"
+        self.memory.add_private("dm", result_text)
+        logger.info(f"投票: {result_text} | 票型: {ballot}")
+
+        return {"passed": passed, "target": winner, "votes": ballot}
+
+    @staticmethod
+    def _normalize_vote(raw: str) -> str:
+        """从各种回复中提取目标 ID：'我选P1' → 'p1'，'我同意' → '弃权'"""
+        import re
+        text = raw.strip()
+        if not text or "弃权" in text:
+            return "弃权"
+        # 匹配 p1-p6（不区分大小写）
+        m = re.search(r'[pP](\d)', text)
+        if m:
+            return f"p{m.group(1)}"
+        return "弃权"
+
     # ── 玩家行动收集（内部）───────────────────────────────────────
 
     async def _collect_actions(
@@ -687,6 +782,8 @@ class Arena:
 
         async def player_act_callback(ctx: GameContext, player: PlayerState) -> CoTOutput:
             """单个玩家的行动回调"""
+            phase_label = "发言" if getattr(self.hooks, 'skip_parse', False) else "行动"
+            logger.info(f"▶ {player.name}（{player.id}）{phase_label}中...")
             # 暂停检查：每玩家行动前等待
             await self._wait_if_paused()
 

@@ -94,14 +94,15 @@ class TurnManager:
             player.is_thinking = False
             player.last_public_speech = action.public_speech if action else ""
             player.last_cot = action
+            logger.info(f"✓ {player.name}（{player.id}）完成")
 
             if on_action_done:
                 await on_action_done(player, action)
 
             results.append((player, action))
 
-            # 发言间隔（可选，让前端有时间展示动画）
-            await asyncio.sleep(0.5)
+            # 发言间隔（防 API 速率限制 + 前端动画）
+            await asyncio.sleep(2.0)
 
             player.is_current_speaker = False
 

@@ -12,10 +12,15 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
       store.setCtx(payload.ctx as unknown as import('../types/arena').GameContext);
     }
     store.setGameStatus('running');
+    // 请求浏览器通知权限
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   },
 
-  ROUND_START: (payload, _store) => {
-    // 轮次开始，前端高亮效果由组件处理
+  ROUND_START: (_payload, store) => {
+    // 轮次开始，退出轮间等待状态
+    store.setGameStatus('running');
   },
 
   PLAYER_THINKING: (payload, store) => {
@@ -50,6 +55,11 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
   STATE_UPDATE: (payload, store) => {
     if (payload.phase === 'round_paused') {
       store.setGameStatus('round_paused');
+      // 浏览器通知：轮次完成，无需盯着屏幕
+      const round = payload.round as number;
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('MAGA Arena', { body: `第 ${round} 轮已完成`, icon: '🔄', silent: true });
+      }
     }
     if (payload.ctx) {
       store.setCtx(payload.ctx as unknown as import('../types/arena').GameContext);
@@ -60,7 +70,11 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
     // 玩家错误
   },
 
-  GAME_OVER: (_payload, store) => {
+  GAME_OVER: (payload, store) => {
+    store.setGameOverPayload({
+      winner_id: payload.winner_id as string,
+      winner_name: payload.winner_name as string,
+    });
     store.setGameStatus('finished');
   },
 
@@ -89,8 +103,17 @@ export function useWebSocket() {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
-    ws.onopen = () => {
+    ws.onopen = async () => {
       setConnected(true);
+      // 断线重连后尝试恢复游戏状态
+      try {
+        const res = await fetch('/api/arena/state');
+        const data = await res.json();
+        if (data.ctx) {
+          store.getState().setCtx(data.ctx as unknown as import('../types/arena').GameContext);
+          store.getState().setGameStatus(data.status === 'running' ? 'running' : 'round_paused');
+        }
+      } catch { /* 无游戏运行则忽略 */ }
       // 启动心跳
       const heartbeat = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {

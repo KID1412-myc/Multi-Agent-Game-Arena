@@ -107,17 +107,15 @@ class GreedyMineHooks(GameHooks):
                 tname = ctx.round.players[target].name if target else ""
                 lines.append(f"- {p.name}: {act}" + (f" → {tname}" if target else ""))
 
-        lines.append("\n## 结算矩阵（严格按此计算金币）")
-        lines.append("- 发育无人掠夺 → +2")
-        lines.append("- 发育每被 1 人掠夺 → -4")
-        lines.append("- 防御无人掠夺 → -1")
-        lines.append("- 防御被 1-2 人掠夺 → 不变，掠夺者各 -1")
-        lines.append("- 防御被 3+ 人围殴 → 破盾！防御者 -3，攻击者各 +3")
-        lines.append("- 掠夺目标发育 → +5")
-        lines.append("- 掠夺目标防御（未被破盾）→ 掠夺者 -1")
-        lines.append("- 掠夺目标也掠夺 → 双方各 -3")
+        # 行动摘要（DM 据此叙事）
+        summary = "\n## 本轮行动（如实叙述即可）\n"
+        for pid, (act, target) in self.actions.items():
+            p = ctx.round.players.get(pid)
+            if p and p.is_alive:
+                tname = ctx.round.players[target].name if target else ""
+                summary += f"- {p.name}: {act}" + (f" → {tname}" if target else "") + "\n"
 
-        self.memory.add_private("dm", "\n".join(lines))
+        self.memory.add_private("dm", "\n".join(lines) + summary)
         return ctx
 
     async def after_dm_judge(
@@ -129,14 +127,12 @@ class GreedyMineHooks(GameHooks):
 
         gold_deltas = self._apply_matrix(ctx)
 
-        # 构建正确的 resource_delta 交给引擎（替代 DM 的）
+        # 直接应用金币变动（清空 DM 的 resource_delta 防止 arena 二次应用）
         verdict.resource_delta.clear()
         for pid, delta in gold_deltas.items():
             p = ctx.round.players.get(pid)
             if p and p.is_alive and delta != 0:
-                verdict.resource_delta.append(
-                    ResourceDelta(player_id=pid, changes={"gold": delta})
-                )
+                p.resources["gold"] = p.resources.get("gold", 0) + delta
 
         # 淘汰金币 ≤ 0 的玩家
         eliminated = []
@@ -144,6 +140,19 @@ class GreedyMineHooks(GameHooks):
             if p.is_alive and p.resources.get("gold", 0) <= 0:
                 p.is_alive = False
                 eliminated.append(p.name)
+
+        # 末位淘汰（第 4 轮起）
+        rn = ctx.round.round_number
+        if rn >= 4:
+            alive = [(pid, p) for pid, p in ctx.round.players.items() if p.is_alive]
+            if len(alive) > 1:
+                min_gold = min(p.resources.get("gold", 0) for _, p in alive)
+                bottom = [(pid, p) for pid, p in alive if p.resources.get("gold", 0) == min_gold]
+                for pid, p in bottom:
+                    p.is_alive = False
+                    eliminated.append(p.name)
+                if bottom:
+                    logger.info(f"  末位淘汰 ({rn}轮): {[n for _,n in bottom]}")
 
         logger.info(f"  结算完成: {', '.join(f'{pid}={gold_deltas[pid]:+d}' for pid in gold_deltas)}" )
         if eliminated:
@@ -170,7 +179,9 @@ class GreedyMineHooks(GameHooks):
             max_gold = max(p.resources.get("gold", 0) for p in alive)
             winners = [p.id for p in alive if p.resources.get("gold", 0) == max_gold]
             if winners:
-                return winners[0]
+                # 返回所有并列者（用逗号拼，引擎只用第一个做 winner_id，但前端会用全部）
+                self._winners = winners
+                return ",".join(winners)
         return None
 
     # ================================================================
@@ -222,7 +233,8 @@ class GreedyMineHooks(GameHooks):
             if act == LOOT and target:
                 raiders.append((pid, target))
                 target_counts[target] = target_counts.get(target, 0) + 1
-        mass_raided = {t for t, c in target_counts.items() if c >= 3}
+        alive_count = sum(1 for p in ctx.round.players.values() if p.is_alive)
+        mass_raided = {t for t, c in target_counts.items() if c >= alive_count // 2}
 
         # 对每个玩家结算
         for pid, (act, target) in self.actions.items():
@@ -265,8 +277,9 @@ class GreedyMineHooks(GameHooks):
                 elif target_act == LOOT:
                     deltas[pid] += LOOT_VS_LOOT
 
-                # 自己被其他人掠夺：双方各-2（LOOT vs LOOT）
+                # 被其他人掠夺（排除互相攻击的对手，避免双重扣分）
                 for rid in raiders_on_me:
-                    deltas[pid] += LOOT_VS_LOOT
+                    if rid != target:
+                        deltas[pid] += LOOT_VS_LOOT
 
         return deltas
