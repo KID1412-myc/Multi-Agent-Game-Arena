@@ -1,0 +1,16 @@
+{
+    "_comment": "全局默认模型配置——新游戏不指定 provider/model 时自动继承",
+    "dm_model": "claude-sonnet-4-6-r",
+    "dm_provider": "relay",
+    "players": [
+        { "name": "ChatGPT",    "model": "gpt-5.5",                      "provider": "relay" },
+        { "name": "Claude",     "model": "claude-sonnet-4-6-r",            "provider": "relay" },
+        { "name": "豆包",       "model": "doubao-seed-2-0-lite-260215",   "provider": "doubao" },
+        { "name": "通义千问",   "model": "qwen3.7-plus",                 "provider": "qwen" },
+        { "name": "混元",       "model": "hy3-preview",                  "provider": "hunyuan" },
+        { "name": "Gemini",     "model": "gemini-3.1-flash-lite-preview",             "provider": "relay" },
+        { "name": "Deepseek",   "model": "deepseek-v4-flash",              "provider": "deepseek" },
+        { "name": "Kimi",       "model": "kimi-k2.6",                    "provider": "qwen" },
+        { "name": "MiniMax",    "model": "minimax-m2.7",                 "provider": "minimax" }
+    ]
+}

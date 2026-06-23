@@ -22,8 +22,13 @@ COLOR_ALIASES = {
 RING = ["p1", "p2", "p3", "p4", "p5", "p6"]
 # 每个人沿环形顺延能看到几个活人（不含自己）
 VISIBLE_COUNT = 1
-QUESTION_KEYWORDS = ["不对劲", "有内鬼", "有诈", "有人在骗", "卧底", "内奸", "欺诈",
-                      "谁是假的", "身份可疑", "有问题", "我怀疑"]
+QUESTION_KEYWORDS = [
+    "不对劲", "有内鬼", "有诈", "有人在骗", "卧底", "内奸", "欺诈",
+    "谁是假的", "身份可疑", "有问题", "我怀疑",
+    "不太对", "反常", "有矛盾", "前后不一", "奇怪", "可疑",
+    "撒谎", "骗人", "你确定", "真的假的", "他有问题", "搞鬼", "不对头",
+    "谎言", "伪装", "不是真的", "忽悠", "别装了", "露馅",
+]
 TRIAL_KEYWORDS = ["发起审判", "我要审判", "我指认"]
 PEACE_WIN = 4  # 连续N轮无人死亡 → 平民共赢
 
@@ -66,17 +71,17 @@ class BombCollarHooks(GameHooks):
         await a.collect_speeches(ctx, alive)
         speech_cots = a.save_speech_cots(ctx)
 
-        # ── 检测质疑关键词 → 解锁审判 ──
-        if await self._check_question_trigger(ctx, alive):
-            # 追加一轮辩论：所有人知道审判已解锁，讨论指认谁
+        # ── DM 检测怀疑 → 解锁审判 ──
+        suspicion, _ = await self._dm_check_trial(ctx, alive, a, check_trial=False)
+        if suspicion:
             await a.collect_speeches(ctx, alive)
             extra_cots = a.save_speech_cots(ctx)
             for pid, cot in extra_cots.items():
                 if pid in speech_cots:
                     speech_cots[pid] = cot
 
-        # ── 检测审判关键词 → 发起投票 ──
-        trial_result = await self._check_trial_vote(ctx, alive, a)
+        # ── DM 检测审判 → 发起投票 ──
+        _, trial_result = await self._dm_check_trial(ctx, alive, a, check_trial=True)
         if trial_result == "fraudster_dead":
             return False
 
@@ -94,7 +99,7 @@ class BombCollarHooks(GameHooks):
         for agent in a.players.values():
             agent.quick_action_prompt = "现在是猜色阶段。只回复一个字：红 / 蓝 / 绿"
         try:
-            await a.collect_actions(ctx, alive)
+            await a.collect_actions(ctx, alive, parallel=True)
         finally:
             for agent in a.players.values():
                 agent.quick_action_prompt = None
@@ -164,6 +169,8 @@ class BombCollarHooks(GameHooks):
         ))
         actions = [(p, p.last_cot) for p in ctx.round.players.values() if p.last_cot]
         await a.dm_judge(ctx, actions)
+        # 防止 DM 无意中暗示欺诈师身份，不进温记忆
+        self.memory.update_warm_summary("")
         await a.emit_state(ctx)
 
         if round_num >= ctx.game_config.total_rounds:
@@ -283,94 +290,182 @@ class BombCollarHooks(GameHooks):
             p.fraud_tag = "【欺诈师】" if p.id == self.fraudster_id else ""
             p.see_tag = f"能看 {vids}" if vids else ""
 
-    async def _check_question_trigger(self, ctx, alive) -> bool:
-        """扫描发言中的质疑关键词，解锁审判。返回 True 表示本轮刚解锁。"""
-        if self.trial_available or self.trial_used:
-            return False
-        for p in alive:
-            if p.last_public_speech and any(
-                kw in p.last_public_speech for kw in QUESTION_KEYWORDS
-            ):
-                self.trial_available = True
-                logger.info(f"\n{'='*40}\n🔔 {p.name} 触发审判机制！关键词命中\n{'='*40}")
-                ctx.round.public_log.append(
-                    f"🔔 {p.name} 的发言触发了审判机制！追加一轮辩论。"
-                )
-                # 立即通知所有平民
-                for o in alive:
-                    if o.id != self.fraudster_id:
-                        self.memory.add_private(o.id,
-                            "⚡ 审判机制已触发！追加一轮发言讨论谁是欺诈师。"
-                            "发言中说'我指认pX'发起审判。\n"
-                            "审判规则：指认者花2分，全员投票过半通过。"
-                            "指中欺诈师→指认者+4分，欺诈师淘汰。"
-                            "指错→指认者自己爆炸。未过半→指认者扣2分。")
-                return True
-        return False
+    async def _dm_check_trial(self, ctx, alive, a, check_trial: bool = True):
+        """
+        DM 检测怀疑和审判。返回 (suspicion, trial_result)。
+        trial_result: None / "fraudster_dead"
+        失败时回退到关键词匹配。
+        """
+        if self.trial_used:
+            return False, None
 
-    async def _check_trial_vote(self, ctx, alive, a) -> Optional[str]:
-        """扫描发言中的审判关键词，执行投票。返回 "fraudster_dead" 或 None。"""
-        if self.trial_used or not self.trial_available:
-            return None
-        for p in alive:
-            speech = p.last_public_speech or ""
-            if not any(kw in speech for kw in TRIAL_KEYWORDS):
-                continue
-            # 找被指认的人（匹配 ID 或名字）
-            target = None
+        # ── DM 调用 ──
+        dm_result = await self._call_dm_for_trial(ctx, alive, check_trial)
+        if dm_result is not None:
+            suspicion, trial, accuser_id, target_id = dm_result
+        else:
+            # ── 兜底：关键词匹配 ──
+            logger.info("DM 审判检测失败，回退关键词匹配")
+            suspicion, trial, accuser_id, target_id = self._keyword_trial_check(alive)
+
+        # ── 处理怀疑 ──
+        if suspicion and not self.trial_available:
+            self.trial_available = True
+            logger.info(f"\n{'='*40}\n🔔 DM 检测到怀疑，审判机制解锁\n{'='*40}")
+            ctx.round.public_log.append("🔔 有人表达了怀疑，审判机制解锁！追加一轮辩论。")
             for o in alive:
-                if o.id != p.id and (o.id in speech or o.name in speech):
-                    target = o.id
-                    break
-            if not target:
-                continue
+                if o.id != self.fraudster_id:
+                    self.memory.add_private(o.id,
+                        "⚡ 审判机制已触发！追加一轮发言讨论谁是欺诈师。"
+                        "发言中说'我指认pX'发起审判。\n"
+                        "审判规则：指认者花2分，全员投票过半通过。"
+                        "指中欺诈师→指认者+4分，欺诈师淘汰。"
+                        "指错→指认者自己爆炸。未过半→指认者扣2分。")
+
+        # ── 处理审判 ──
+        if trial and check_trial and self.trial_available and not self.trial_used:
+            if not accuser_id or not target_id:
+                return True, None
+            if accuser_id not in ctx.round.players or target_id not in ctx.round.players:
+                return True, None
 
             self.trial_used = True
-            target_name = ctx.round.players[target].name
-            logger.info(f"\n{'='*40}\n⚡ 审判发起！{p.name} 指认 {target_name} 是欺诈师\n{'='*40}")
-
-            # 写入公共日志，前端可见
-            ctx.round.public_log.append(
-                f"⚖️ 审判：{p.name} 指认 {target_name} 是欺诈师！全员投票中..."
-            )
+            accuser = ctx.round.players[accuser_id]
+            target_name = ctx.round.players[target_id].name
+            logger.info(f"\n{'='*40}\n⚡ DM 检测到审判：{accuser.name} 指认 {target_name}\n{'='*40}")
+            ctx.round.public_log.append(f"⚖️ 审判：{accuser.name} 指认 {target_name} 是欺诈师！全员投票中...")
 
             result = await a.vote(
-                f"审判：{p.name} 指认 {target_name} 是欺诈师",
+                f"审判：{accuser.name} 指认 {target_name} 是欺诈师",
                 ctx,
                 [t.id for t in alive],
-                f"{p.name} 认为 {target_name}（{target}）是欺诈师。"
-                f"如果你同意，回复 {target}。如果你认为是别人，回复那个人的ID。不确定回复弃权。",
+                f"{accuser.name} 认为 {target_name}（{target_id}）是欺诈师。"
+                f"如果你同意，回复 {target_id}。如果你认为是别人，回复那个人的ID。不确定回复弃权。",
             )
 
-            # 公布投票结果
             votes_str = ", ".join(f"{ctx.round.players[pid].name if pid in ctx.round.players else pid}→{v}"
                                   for pid, v in result.get("votes", {}).items())
             passed = result["passed"]
             logger.info(f"投票结果: {'通过' if passed else '未通过'} | 票型: {votes_str}")
 
             if passed:
-                if target == self.fraudster_id:
+                if target_id == self.fraudster_id:
                     logger.info("审判成功！欺诈师被指认淘汰。")
-                    p.resources["points"] = p.resources.get("points", 0) + 4
+                    accuser.resources["points"] = accuser.resources.get("points", 0) + 4
                     a.eliminate(ctx, self.fraudster_id)
-                    ctx.round.public_log.append(
-                        f"✅ 审判通过！{target_name} 确认为欺诈师，淘汰！{p.name} +4分"
-                    )
-                    return "fraudster_dead"
+                    ctx.round.public_log.append(f"✅ 审判通过！{target_name} 确认为欺诈师，淘汰！{accuser.name} +4分")
+                    return True, "fraudster_dead"
                 else:
-                    logger.info(f"审判失败！{p.name} 指认错误，爆炸淘汰。")
-                    a.eliminate(ctx, p.id)
-                    ctx.round.public_log.append(
-                        f"❌ 审判通过但指认错误！{p.name} 爆炸淘汰。"
-                    )
+                    logger.info(f"审判失败！{accuser.name} 指认错误，爆炸淘汰。")
+                    a.eliminate(ctx, accuser_id)
+                    ctx.round.public_log.append(f"❌ 审判通过但指认错误！{accuser.name} 爆炸淘汰。")
             else:
-                p.resources["points"] = max(0, p.resources.get("points", 0) - 2)
-                logger.info(f"审判未通过。{p.name} 扣2分。")
-                ctx.round.public_log.append(
-                    f"🗳️ 审判未通过（未过半数）。{p.name} 扣2分。"
-                )
-            break
+                accuser.resources["points"] = max(0, accuser.resources.get("points", 0) - 2)
+                logger.info(f"审判未通过。{accuser.name} 扣2分。")
+                ctx.round.public_log.append(f"🗳️ 审判未通过（未过半数）。{accuser.name} 扣2分。")
+
+        return self.trial_available, None
+
+    async def _call_dm_for_trial(self, ctx, alive, check_trial: bool):
+        """调用 DM 检测怀疑和审判。成功返回 (suspicion, trial, accuser, target)，失败返回 None。"""
+        import json
+        from engine.schema import ModelMessage
+
+        speeches = "\n".join(
+            f"{p.id} ({p.name}): {p.last_public_speech or '(沉默)'}"
+            for p in alive if p.last_public_speech
+        )
+        task = "判断两点：1. suspicion——有人表达了怀疑或不信任？2. trial——有人明确指认某个玩家是欺诈师（如说'我指认pX'）？如果指认，标注 accuser（指认者ID）和 target（被指认者ID）。"
+        if not check_trial:
+            task = "只判断：suspicion——有人表达了怀疑或不信任？（本轮不检测指认）"
+
+        sys = (
+            "你是审判检测器。分析以下发言。\n" + task + "\n"
+            "⚠️ 只返回 JSON，不得输出任何其他文字：\n"
+            '{"suspicion": false, "trial": false, "accuser": null, "target": null}'
+        )
+        msgs = [
+            ModelMessage(role="system", content=sys),
+            ModelMessage(role="user", content=f"## 本轮发言\n{speeches}"),
+        ]
+
+        try:
+            resp = await a.router.chat(
+                messages=msgs,
+                model=ctx.game_config.dm_model,
+                provider=ctx.game_config.dm_provider,
+                max_tokens=256,
+                temperature=0.0,
+                json_mode=True,
+            )
+            raw = resp.content.strip()
+            # 从回复中提取 JSON（容错：模型在 JSON 前后写废话）
+            json_text = self._extract_json_object(raw)
+            if not json_text:
+                logger.warning(f"DM 审判检测：无法提取 JSON，raw=[{raw[:200]}]")
+                return None
+            data = json.loads(json_text)
+            return (
+                data.get("suspicion", False),
+                data.get("trial", False),
+                data.get("accuser"),
+                data.get("target"),
+            )
+        except Exception as e:
+            logger.warning(f"DM 审判检测失败: {e}")
+            return None
+
+    @staticmethod
+    def _extract_json_object(text: str):
+        """从混合文本中提取第一个完整 JSON 对象"""
+        start = text.find('{')
+        if start == -1:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for i, ch in enumerate(text[start:], start):
+            if escape:
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i+1]
         return None
+
+    def _keyword_trial_check(self, alive):
+        """关键词兜底：匹配怀疑+审判关键词。返回 (suspicion, trial, accuser_id, target_id)。"""
+        suspicion = False
+        trial = False
+        accuser_id = None
+        target_id = None
+
+        for p in alive:
+            speech = p.last_public_speech or ""
+            if not suspicion and any(kw in speech for kw in QUESTION_KEYWORDS):
+                suspicion = True
+            if not trial and any(kw in speech for kw in TRIAL_KEYWORDS):
+                trial = True
+                accuser_id = p.id
+                # 找被指认的人
+                for o in alive:
+                    if o.id != p.id and (o.id in speech or o.name in speech):
+                        target_id = o.id
+                        break
+                if not target_id:
+                    trial = False  # 有关键词但无目标，不算
+        return suspicion, trial, accuser_id, target_id
 
     def _parse_color(self, text: str, player=None) -> Optional[str]:
         t = text.strip()

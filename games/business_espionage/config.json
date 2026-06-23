@@ -118,7 +118,7 @@
         {
             "id": "p6",
             "name": "霓虹科技 NeonTech",
-            "model": "deepseek-v4-pro",
+            "model": "deepseek-v4-flash",
             "provider": "deepseek",
             "secret_identity": "你是一家以激进著称的科技新贵，创始人以'打破一切规则'为座右铭。你有强大的黑客团队和情报网络。你的目标是在不被人发现的情况下窃取至少两家公司的核心数据。你公开表现得友好合作，私下却在密谋渗透。你的弱点是爱炫耀，有时会得意忘形露出破绽。",
             "initial_resources": {

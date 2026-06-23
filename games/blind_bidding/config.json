@@ -34,7 +34,7 @@
         {
             "id": "p2",
             "name": "Claude",
-            "model": "claude-opus-4-8-r",
+            "model": "claude-sonnet-4-6-r",
             "provider": "relay",
             "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
             "initial_resources": {
@@ -74,7 +74,7 @@
         {
             "id": "p6",
             "name": "Gemini",
-            "model": "gemini-3.5-flash",
+            "model": "gemini-3.1-flash-lite-preview",
             "provider": "relay",
             "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
             "initial_resources": {

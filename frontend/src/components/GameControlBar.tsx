@@ -1,6 +1,8 @@
-import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward } from 'lucide-react';
+import { useState } from 'react';
+import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward, BookOpen } from 'lucide-react';
 import { useArenaStore } from '../store/arenaStore';
 import { ModelSettings } from './ModelSettings';
+import { RuleModal } from './RuleModal';
 
 interface Props {
   connected: boolean;
@@ -12,9 +14,11 @@ interface Props {
   onNextRound: () => void;
   onAuto: () => void;
   selectedGameId: string;
+  gameName?: string;
 }
 
-export function GameControlBar({ connected, onStart, onStop, onPause, onResume, onStep, onNextRound, onAuto, selectedGameId }: Props) {
+export function GameControlBar({ connected, onStart, onStop, onPause, onResume, onStep, onNextRound, onAuto, selectedGameId, gameName }: Props) {
+  const [showRules, setShowRules] = useState(false);
   const ctx = useArenaStore((s) => s.ctx);
   const gameStatus = useArenaStore((s) => s.gameStatus);
   const isRunning = gameStatus === 'running';
@@ -28,7 +32,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v1.0</span></span>
+      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v2.0</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#666' }}>
@@ -107,7 +111,22 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
           <Square size={12} /> 停止
         </button>
 
+        <button onClick={() => setShowRules(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
+                   border: '1px solid #e5e5e5', borderRadius: 6, background: '#fff', color: '#666',
+                   cursor: 'pointer' }}>
+          <BookOpen size={12} /> 规则
+        </button>
+
         <ModelSettings gameId={selectedGameId} disabled={isActive} />
+
+        {showRules && (
+          <RuleModal
+            gameId={selectedGameId}
+            gameName={gameName || selectedGameId}
+            onClose={() => setShowRules(false)}
+          />
+        )}
       </div>
     </div>
   );

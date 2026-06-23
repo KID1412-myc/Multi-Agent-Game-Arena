@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Gavel, TrendingUp } from 'lucide-react';
 import { useArenaStore } from '../store/arenaStore';
 import { ResourceChart } from './ResourceChart';
+import { NightPanel } from './NightPanel';
 
 export function DMPanel() {
   const ctx = useArenaStore((s) => s.ctx);
@@ -20,6 +21,8 @@ export function DMPanel() {
         <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>DM 裁判</span>
         <span style={{ fontSize: 11, color: '#999', marginLeft: 'auto' }}>{verdictHistory.length} 条裁定</span>
       </div>
+
+      <NightPanel />
 
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0, fontSize: 11, lineHeight: 1.5 }}>
         {verdictHistory.length === 0 ? (

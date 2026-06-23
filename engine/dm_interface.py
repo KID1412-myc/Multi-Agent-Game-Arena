@@ -194,9 +194,15 @@ class DMInterface:
 
     def _load_custom_prompt(self) -> str | None:
         """从游戏目录加载自定义 DM 提示词（支持 .txt 和 .jinja2）"""
+        # PyInstaller 打包兼容
+        base = Path("games")
+        if not base.exists():
+            import sys as _sys
+            if getattr(_sys, 'frozen', False):
+                base = Path(_sys._MEIPASS) / "games"
         candidates = [
-            Path("games") / self.config.game_id / "dm_prompt.txt",
-            Path("games") / self.config.game_id / "dm_prompt.jinja2",
+            base / self.config.game_id / "dm_prompt.txt",
+            base / self.config.game_id / "dm_prompt.jinja2",
         ]
         for path in candidates:
             if path.exists():
@@ -311,6 +317,10 @@ class DMInterface:
 
                 self._last_raw_response = response.content
 
+                # 🔍 调试：打印DM原始返回
+                logger.info(f"[DM] Raw response length: {len(response.content)}")
+                logger.info(f"[DM] Raw response preview: {response.content[:500]}")
+
                 # 解析并校验
                 verdict = self._parse_verdict(response.content)
                 return verdict
@@ -326,13 +336,17 @@ class DMInterface:
     def _parse_verdict(self, raw_text: str) -> DMVerdict:
         """解析 DM 返回的 JSON 为 DMVerdict"""
         text = raw_text.strip()
+        last_error = None
 
         # 策略 1: 直接解析
         try:
             data = json.loads(text)
             return self._to_verdict(data)
-        except (json.JSONDecodeError, Exception):
-            pass
+        except json.JSONDecodeError as e:
+            last_error = f"JSON 解析失败: {e}"
+        except Exception as e:
+            last_error = f"Pydantic 校验失败: {e}"
+            logger.warning(f"[DM] 策略1失败（JSON已解析但校验不通过）: {e}")
 
         # 策略 2: 提取 ```json 代码块
         match = re.search(r"```json\s*([\s\S]*?)```", text)
@@ -340,8 +354,11 @@ class DMInterface:
             try:
                 data = json.loads(match.group(1))
                 return self._to_verdict(data)
-            except (json.JSONDecodeError, Exception):
-                pass
+            except json.JSONDecodeError as e:
+                last_error = f"代码块 JSON 解析失败: {e}"
+            except Exception as e:
+                last_error = f"代码块 Pydantic 校验失败: {e}"
+                logger.warning(f"[DM] 策略2失败: {e}")
 
         # 策略 3: 精确括号匹配提取 JSON 对象（处理"文字{json}文字"混合输出）
         json_object = self._extract_json_object(text)
@@ -349,10 +366,13 @@ class DMInterface:
             try:
                 data = json.loads(json_object)
                 return self._to_verdict(data)
-            except (json.JSONDecodeError, Exception):
-                pass
+            except json.JSONDecodeError as e:
+                last_error = f"括号提取 JSON 解析失败: {e}"
+            except Exception as e:
+                last_error = f"括号提取 Pydantic 校验失败: {e}"
+                logger.warning(f"[DM] 策略3失败: {e}")
 
-        raise ValueError(f"无法解析 DM 返回的 JSON")
+        raise ValueError(f"无法解析 DM 返回的 JSON: {last_error}")
 
     @staticmethod
     def _extract_json_object(text: str) -> Optional[str]:

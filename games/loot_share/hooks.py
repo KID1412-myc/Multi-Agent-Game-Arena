@@ -68,7 +68,7 @@ class LootShareHooks(GameHooks):
         for agent in a.players.values():
             agent.quick_action_prompt = f"本轮赃款{self.loot}。只回复一个整数，例如：5"
         try:
-            await a.collect_actions(ctx, alive)
+            await a.collect_actions(ctx, alive, parallel=True)
         finally:
             for agent in a.players.values():
                 agent.quick_action_prompt = None
@@ -120,6 +120,8 @@ class LootShareHooks(GameHooks):
         ))
         actions = [(p, p.last_cot) for p in ctx.round.players.values() if p.last_cot]
         await a.dm_judge(ctx, actions)
+        # 盲投模式：DM 裁决不进温记忆，避免分数泄露。6 轮游戏热记忆足够。
+        self.memory.update_warm_summary("")
         await a.emit_state(ctx)
 
         if round_num >= ctx.game_config.total_rounds:
@@ -166,10 +168,13 @@ class LootShareHooks(GameHooks):
                 f"  - {oid} ({ctx.round.players[oid].name}): 【{self.identities[oid]}】"
                 for oid in pids)
             self.memory.add_private(pid,
-                f"## 全玩家身份\n{id_list}\n\n"
-                f"## 你的身份: 【{identity}】\n"
-                f"## 🔐 你的秘密目标: {goal_name}\n{goal_desc}\n\n"
-                f"每人有一个不同的秘密目标。你只知道自己的，别人的目标是隐藏的。")
+                f"## 🔐 你的秘密目标（获胜条件）\n"
+                f"**{goal_name}**：{goal_desc}\n\n"
+                f"⚠️ 只有达成自己的秘密目标才能获胜，积分高低不是关键！\n\n"
+                f"## 全玩家公开身份（所有人可见，仅供参考）\n{id_list}\n\n"
+                f"## 你的公开身份: 【{identity}】\n"
+                f"（公开身份只是面具——任何身份都可能是任何秘密目标）\n\n"
+                f"每人都只有一个不同的秘密目标。你只知道自己的，别人的目标要从开价和发言中推理。")
             # 前端显示（LLM 不可见，仅观战者可见）
             stalk_info = ""
             if goal_name == "盯上":

@@ -59,6 +59,7 @@ DEFAULT_BASE_URLS: dict[ModelProvider, str] = {
     ModelProvider.MINIMAX:          "https://api.minimax.chat/v1",
     ModelProvider.ZHIPU:            "https://open.bigmodel.cn/api/paas/v4",
     ModelProvider.QWEN:             "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    ModelProvider.HUNYUAN:          "https://tokenhub.tencentmaas.com/v1",
     ModelProvider.OPENAI_COMPATIBLE: "http://localhost:11434/v1",
     ModelProvider.RELAY:             "https://your-relay-api.com/v1",
 }
@@ -73,6 +74,7 @@ API_KEY_ENV_VARS: dict[ModelProvider, str] = {
     ModelProvider.MINIMAX:          "MINIMAX_API_KEY",
     ModelProvider.ZHIPU:            "ZHIPU_API_KEY",
     ModelProvider.QWEN:             "QWEN_API_KEY",
+    ModelProvider.HUNYUAN:          "HUNYUAN_API_KEY",
     ModelProvider.OPENAI_COMPATIBLE: "OPENAI_API_KEY",
     ModelProvider.RELAY:            "RELAY_API_KEY",
 }
@@ -93,6 +95,7 @@ DEFAULT_MODELS: dict[ModelProvider, str] = {
     ModelProvider.MINIMAX:   "abab7-chat",
     ModelProvider.ZHIPU:     "glm-4-plus",
     ModelProvider.QWEN:      "qwen3.7-plus",
+    ModelProvider.HUNYUAN:   "hy3-preview",
     ModelProvider.RELAY:     "gpt-5.4",
 }
 
@@ -244,6 +247,7 @@ class ModelRouter:
             ModelProvider.MINIMAX:           self._call_openai,       # MiniMax 兼容 OpenAI 协议
             ModelProvider.ZHIPU:             self._call_openai,       # 智谱兼容 OpenAI 协议
             ModelProvider.QWEN:              self._call_openai,       # 通义千问兼容 OpenAI 协议
+            ModelProvider.HUNYUAN:          self._call_openai,       # 腾讯混元兼容 OpenAI 协议
             ModelProvider.OPENAI_COMPATIBLE: self._call_openai,
             ModelProvider.RELAY:             self._call_openai,       # 中转站走 OpenAI 协议
         }

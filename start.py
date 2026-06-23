@@ -81,9 +81,8 @@ def main():
     except ImportError:
         print("  Installing Python packages...")
         subprocess.run(
-            [sys.executable, "-m", "pip", "install",
-             "pydantic", "httpx", "jinja2", "pyyaml", "fastapi",
-             "uvicorn", "websockets", "python-dotenv", "openai", "-q"],
+            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "-q"],
+            cwd=ROOT,
             check=True,
         )
         print("  Done")

@@ -15,7 +15,13 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
-GAMES_DIR = Path("games")
+# PyInstaller 打包兼容
+_GAMES_DIR = Path("games")
+if not _GAMES_DIR.exists():
+    import sys as _sys
+    if getattr(_sys, 'frozen', False):
+        _GAMES_DIR = Path(_sys._MEIPASS) / "games"
+GAMES_DIR = _GAMES_DIR
 
 
 @router.get("")
@@ -88,6 +94,16 @@ async def get_game_config(game_id: str):
 
     with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+@router.get("/{game_id}/rules")
+async def get_game_rules(game_id: str):
+    """获取游戏规则文档（RULES.md）"""
+    for name in ("RULES.md", "rules.md", "README.md", "readme.md"):
+        rules_path = GAMES_DIR / game_id / name
+        if rules_path.exists():
+            return {"game_id": game_id, "rules": rules_path.read_text(encoding="utf-8")}
+    raise HTTPException(status_code=404, detail=f"游戏 {game_id} 暂无规则文档")
 
 
 @router.put("/{game_id}/config")

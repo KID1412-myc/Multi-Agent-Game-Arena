@@ -31,6 +31,7 @@ class ModelProvider(str, Enum):
     MINIMAX = "minimax"
     ZHIPU = "zhipu"
     QWEN = "qwen"
+    HUNYUAN = "hunyuan"
     # 通用兼容 OpenAI 协议的厂商（本地模型 / vLLM / Ollama 等）
     OPENAI_COMPATIBLE = "openai_compatible"
     # 中转站模式：统一 API Base + 单一 Key，模型名自由指定
@@ -157,7 +158,7 @@ class DMVerdict(BaseModel):
     round_number: int
     round_summary: str = Field(
         ...,
-        min_length=20,
+        min_length=5,
         description="本轮全局摘要：发生了什么、关键冲突、资源变动概要"
     )
     global_narrative: str = Field(
@@ -301,6 +302,7 @@ class WSEventType(str, Enum):
     PLAYER_ERROR = "PLAYER_ERROR"         # 某个玩家出错
     GAME_OVER = "GAME_OVER"               # 游戏结束
     ENGINE_ERROR = "ENGINE_ERROR"         # 引擎级错误
+    NIGHT_ACTION = "NIGHT_ACTION"         # 夜晚行动（狼人杀等游戏的暗牌操作展示）
 
 
 class WSEvent(BaseModel):

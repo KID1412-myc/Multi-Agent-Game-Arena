@@ -43,7 +43,7 @@ class BlindBiddingHooks(GameHooks):
         for agent in a.players.values():
             agent.quick_action_prompt = "现在是出价阶段。只回复一个整数，例如：5"
         try:
-            await a.collect_actions(ctx, alive)
+            await a.collect_actions(ctx, alive, parallel=True)
         finally:
             for agent in a.players.values():
                 agent.quick_action_prompt = None

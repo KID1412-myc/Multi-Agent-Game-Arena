@@ -20,58 +20,79 @@ export function ArenaLayout() {
 
   const players = Object.values(ctx.round.players);
   const resources = ctx.game_config.resources;
-  const topPlayers = players.slice(0, 3);
-  const bottomPlayers = players.slice(3, 6);
 
-  // Responsive player card height: use vh so cards scale with viewport
-  // ~18-22% of viewport height per row, clamped between 120–160px
-  const cardRowH = 'clamp(120px, 20vh, 160px)';
+  // 三明治布局：顶 1 行 + 中间 DM/看板 + 底可滚动
+  const topPlayers = players.slice(0, 3);
+  const bottomPlayers = players.slice(3);
+
+  // 底部按每行 3 人分组
+  const bottomRows: typeof players[] = [];
+  for (let i = 0; i < bottomPlayers.length; i += 3) {
+    bottomRows.push(bottomPlayers.slice(i, i + 3));
+  }
+
+  const cardRowH = 'clamp(105px, 16vh, 140px)';
 
   return (
     <div style={{
       flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6,
-      background: '#f5f5f5', minHeight: 0,
+      background: '#f5f5f5', minHeight: 0, overflowY: 'auto',
     }}>
-      {/* Top: 3 player cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 8,
-        flexShrink: 0,
-        height: cardRowH,
-        minWidth: 0,
-      }}>
-        {topPlayers.map((p, i) => (
-          <PlayerCard key={p.id} player={p} resources={resources} index={i} />
-        ))}
-      </div>
+      {/* 顶部：固定 1 行玩家 */}
+      {topPlayers.length > 0 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: 8,
+          flexShrink: 0,
+          height: cardRowH,
+          minWidth: 0,
+        }}>
+          {topPlayers.map((p, i) => (
+            <PlayerCard key={p.id} player={p} resources={resources} index={i} />
+          ))}
+        </div>
+      )}
 
-      {/* Middle: DM + PublicBoard */}
+      {/* 中间：DM + PublicBoard（拿最大空间） */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
         gap: 8,
         flex: 1,
-        minHeight: 180,
+        minHeight: 200,
         overflow: 'hidden',
       }}>
         <DMPanel />
         <PublicBoard />
       </div>
 
-      {/* Bottom: 3 player cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 8,
-        flexShrink: 0,
-        height: cardRowH,
-        minWidth: 0,
-      }}>
-        {bottomPlayers.map((p, i) => (
-          <PlayerCard key={p.id} player={p} resources={resources} index={i + 3} />
-        ))}
-      </div>
+      {/* 底部：其余玩家，可滚动 */}
+      {bottomRows.length > 0 && (
+        <div style={{
+          flexShrink: 0,
+          maxHeight: 300,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          {bottomRows.map((row, rowIdx) => (
+            <div key={rowIdx} style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 8,
+              flexShrink: 0,
+              height: cardRowH,
+              minWidth: 0,
+            }}>
+              {row.map((p, colIdx) => (
+                <PlayerCard key={p.id} player={p} resources={resources} index={3 + rowIdx * 3 + colIdx} />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

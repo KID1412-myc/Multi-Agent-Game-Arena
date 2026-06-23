@@ -41,7 +41,15 @@ import importlib
 importlib.invalidate_caches()
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn, webbrowser, threading
+
+    def _open_browser():
+        import time as _time
+        _time.sleep(1.5)
+        webbrowser.open(f"http://localhost:{PORT}")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
+
     uvicorn.run(
         "server.main:app",
         host="0.0.0.0",

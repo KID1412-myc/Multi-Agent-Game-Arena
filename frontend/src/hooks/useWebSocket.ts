@@ -19,8 +19,9 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
   },
 
   ROUND_START: (_payload, store) => {
-    // 轮次开始，退出轮间等待状态
+    // 轮次开始，退出轮间等待状态，清空上轮夜晚日志
     store.setGameStatus('running');
+    store.clearNightLog();
   },
 
   PLAYER_THINKING: (payload, store) => {
@@ -70,6 +71,17 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
     // 玩家错误
   },
 
+  NIGHT_ACTION: (payload, store) => {
+    store.addNightAction({
+      action: payload.action as string,
+      player_id: payload.player_id as string,
+      player_name: payload.player_name as string,
+      detail: payload.detail as string,
+      target_id: payload.target_id as string | undefined,
+      round: payload.round as number,
+    });
+  },
+
   GAME_OVER: (payload, store) => {
     store.setGameOverPayload({
       winner_id: payload.winner_id as string,
@@ -88,7 +100,7 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const setConnected = useArenaStore((s) => s.setConnected);
   const setGameStatus = useArenaStore((s) => s.setGameStatus);
   const reset = useArenaStore((s) => s.reset);

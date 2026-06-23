@@ -1,6 +1,6 @@
 # 🔴 API 密钥 — 绝对不可提交
 .env
-.env.*
+!.env.example
 *.secret
 
 # 依赖
@@ -11,6 +11,11 @@ __pycache__/
 *.pyo
 dist/
 build/
+
+# 虚拟环境
+venv/
+.venv/
+env/
 
 # IDE
 .vscode/
@@ -31,6 +36,5 @@ Thumbs.db
 *.egg
 
 # Local notes
-PROJECT_STATUS.md
 CLAUDE.md
 .claudeignore

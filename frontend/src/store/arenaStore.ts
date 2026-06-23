@@ -3,7 +3,7 @@
 // ============================================
 
 import { create } from 'zustand';
-import type { GameContext, PlayerState, DMVerdict, CoTOutput } from '../types/arena';
+import type { GameContext, PlayerState, DMVerdict, CoTOutput, NightAction } from '../types/arena';
 
 interface ArenaState {
   // 游戏上下文
@@ -11,7 +11,7 @@ interface ArenaState {
   // 连接状态
   connected: boolean;
   gameStatus: 'idle' | 'loading' | 'running' | 'paused' | 'round_paused' | 'finished' | 'error';
-  gameOverPayload: { winner_id?: string; winner_name?: string } | null;
+  gameOverPayload: { winner_id?: string; winner_name?: string; ranking?: { name: string; score: number }[] } | null;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -19,6 +19,8 @@ interface ArenaState {
   showCoT: boolean;
   // DM 历史
   verdictHistory: DMVerdict[];
+  // 夜晚行动日志（仅前端展示，不进入玩家上下文）
+  nightLog: NightAction[];
   // 错误
   errors: string[];
 
@@ -31,6 +33,8 @@ interface ArenaState {
   setSelectedPlayer: (id: string | null) => void;
   toggleCoT: () => void;
   addVerdict: (v: DMVerdict) => void;
+  addNightAction: (a: NightAction) => void;
+  clearNightLog: () => void;
   addError: (e: string) => void;
   updatePlayer: (playerId: string, updates: Partial<PlayerState>) => void;
   reset: () => void;
@@ -45,6 +49,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
   selectedPlayerId: null,
   showCoT: false,
   verdictHistory: [],
+  nightLog: [],
   errors: [],
 
   setCtx: (ctx) => set({ ctx }),
@@ -64,6 +69,13 @@ export const useArenaStore = create<ArenaState>((set) => ({
     set((state) => ({
       verdictHistory: [...state.verdictHistory, v],
     })),
+
+  addNightAction: (a) =>
+    set((state) => ({
+      nightLog: [...state.nightLog, a],
+    })),
+
+  clearNightLog: () => set({ nightLog: [] }),
 
   addError: (e) =>
     set((state) => ({
@@ -94,6 +106,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
       selectedPlayerId: null,
       showCoT: false,
       verdictHistory: [],
+      nightLog: [],
       errors: [],
     }),
 }));

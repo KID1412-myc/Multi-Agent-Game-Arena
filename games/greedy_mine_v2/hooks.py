@@ -48,7 +48,7 @@ class GreedyMineHooks(GameHooks):
 
         # ── 阶段 2：全员行动 ──
         self.actions.clear()
-        await a.collect_actions(ctx, alive)
+        await a.collect_actions(ctx, alive, parallel=True)
 
         # 用 speech_cots 恢复 last_cot
         for pid, p in ctx.round.players.items():

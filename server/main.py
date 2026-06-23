@@ -10,11 +10,15 @@ import socket as _socket
 _orig = _socket.getaddrinfo
 _socket.getaddrinfo = lambda h, p, f=0, *a, **kw: _orig(h, p, _socket.AF_INET, *a, **kw)
 
-# 🔑 加载 .env
-from dotenv import load_dotenv
-load_dotenv()
-
+# 🔑 加载 .env（exe 模式下存 exe 同目录，开发模式存项目根目录）
 from pathlib import Path
+from dotenv import load_dotenv
+import sys as _sys
+def _env_path() -> Path:
+    if getattr(_sys, 'frozen', False):
+        return Path(_sys.executable).parent / ".env"
+    return Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path())
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +28,7 @@ from server.api import arena, events, games, models
 
 app = FastAPI(
     title="MAGA Arena API",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -39,11 +43,6 @@ app.include_router(games.router)
 app.include_router(arena.router)
 app.include_router(events.router)
 app.include_router(models.router)
-
-
-@app.get("/")
-async def root():
-    return {"name": "MAGA", "version": "1.0.0", "status": "running", "docs": "/docs"}
 
 
 @app.get("/api/health")
@@ -110,6 +109,65 @@ async def test_connection(body: dict | None = None):
         return {"ok": False, "error": str(e)}
 
 
-frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
-if frontend_dist.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+@app.post("/api/setup/save-env")
+async def save_env(body: dict):
+    """首次启动保存 .env 配置"""
+    env_path = _env_path()
+    lines = []
+    for key, val in body.items():
+        if val and isinstance(val, str) and val.strip():
+            lines.append(f"{key}={val.strip()}")
+    env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # 重新加载环境变量
+    load_dotenv(override=True)
+    return {"ok": True, "message": "配置已保存，刷新页面即可开始"}
+
+
+# 检测是否有 .env，没有则返回首次配置标记
+@app.get("/api/setup/status")
+async def setup_status():
+    env_path = _env_path()
+    from engine.router import API_KEY_ENV_VARS
+    has_env = env_path.exists()
+    providers = [
+        {"id": "relay", "name": "中转站 (Relay)", "env_key": "RELAY_API_KEY"},
+        {"id": "openai", "name": "OpenAI", "env_key": "OPENAI_API_KEY"},
+        {"id": "anthropic", "name": "Anthropic", "env_key": "ANTHROPIC_API_KEY"},
+        {"id": "gemini", "name": "Google Gemini", "env_key": "GEMINI_API_KEY"},
+        {"id": "deepseek", "name": "DeepSeek", "env_key": "DEEPSEEK_API_KEY"},
+        {"id": "doubao", "name": "豆包", "env_key": "DOUBAO_API_KEY"},
+        {"id": "zhipu", "name": "智谱 GLM", "env_key": "ZHIPU_API_KEY"},
+        {"id": "qwen", "name": "通义千问 Qwen", "env_key": "QWEN_API_KEY"},
+        {"id": "minimax", "name": "MiniMax", "env_key": "MINIMAX_API_KEY"},
+        {"id": "hunyuan", "name": "腾讯混元", "env_key": "HUNYUAN_API_KEY"},
+    ]
+    return {"has_env": has_env, "providers": providers}
+
+
+# 前端静态文件：打包后从 PyInstaller 临时目录读取，开发时从项目目录读取
+import sys as _sys
+_frontend_dist = None
+if getattr(_sys, 'frozen', False):
+    # PyInstaller 打包模式 — 搜索 _MEIPASS 下的 frontend/dist
+    _meipass = Path(_sys._MEIPASS)
+    for _candidate in [
+        _meipass / "frontend" / "dist",
+        _meipass / "dist",
+    ]:
+        if (_candidate / "index.html").exists():
+            _frontend_dist = _candidate
+            break
+    if not _frontend_dist:
+        # 兜底：遍历查找 index.html
+        for _f in _meipass.rglob("index.html"):
+            if "frontend" in str(_f) or "dist" in str(_f):
+                _frontend_dist = _f.parent
+                break
+else:
+    _frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+
+if _frontend_dist and _frontend_dist.exists():
+    print(f"[MAGA] 前端静态文件: {_frontend_dist}")
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
+else:
+    print(f"[MAGA] ⚠️ 前端文件未找到，仅提供 API 服务。_MEIPASS={getattr(_sys, '_MEIPASS', 'N/A')}")

@@ -34,7 +34,7 @@
         {
             "id": "p2",
             "name": "Claude",
-            "model": "claude-opus-4-8-r",
+            "model": "claude-sonnet-4-6-r",
             "provider": "relay",
             "secret_identity": "你是分赃者。根据直觉选择，不要被任何预设限制。",
             "initial_resources": {

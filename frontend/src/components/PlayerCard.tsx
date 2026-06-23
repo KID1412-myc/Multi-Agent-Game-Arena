@@ -74,28 +74,28 @@ export function PlayerCard({ player, resources }: Props) {
         ))}
       </div>
 
-      {/* 内心分析：局势评估 + 内心策略 均分空间，各自独立滚动，不依赖点击 */}
+      {/* 内心分析：局势评估 + 内心策略 左右并排，各自独立滚动 */}
       {cot && !isDead && (
         <div style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4,
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', gap: 6,
           fontSize: 10, color: '#555', lineHeight: 1.4,
         }}>
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontWeight: 600, color: '#3b82f6', flexShrink: 0, marginBottom: 1 }}>局势评估</div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
               {cot.situation_assessment}
             </div>
           </div>
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontWeight: 600, color: '#8b5cf6', flexShrink: 0, marginBottom: 1 }}>内心策略</div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
               {cot.internal_strategy}
             </div>
           </div>
           {cot.secret_action && isSelected && (
-            <div style={{ flexShrink: 0 }}>
+            <div style={{ flexShrink: 0, maxWidth: 120 }}>
               <div style={{ fontWeight: 600, color: '#ef4444', marginBottom: 1 }}>秘密行动</div>
-              <div style={{ maxHeight: 60, overflowY: 'auto', overflowX: 'hidden' }}>
+              <div style={{ maxHeight: 60, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
                 {cot.secret_action}
               </div>
             </div>

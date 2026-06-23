@@ -119,7 +119,17 @@ export type WSEventType =
   | 'STATE_UPDATE'
   | 'PLAYER_ERROR'
   | 'GAME_OVER'
-  | 'ENGINE_ERROR';
+  | 'ENGINE_ERROR'
+  | 'NIGHT_ACTION';
+
+export interface NightAction {
+  action: string;       // wolf_chat | wolf_vote | seer_check | witch_action | wolf_kill | hunter_shoot
+  player_id: string;
+  player_name: string;
+  detail: string;
+  target_id?: string;
+  round: number;
+}
 
 export interface WSEvent {
   event_type: WSEventType;

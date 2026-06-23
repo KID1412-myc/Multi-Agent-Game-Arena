@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import os
 from pathlib import Path
 
 from engine.schema import (
@@ -125,6 +126,10 @@ class PlayerAgent:
             ModelMessage(role="user", content=user_prompt),
         ]
 
+        # 调试：打印完整上下文（MAGA_DEBUG=1 时启用）
+        if os.environ.get("MAGA_DEBUG"):
+            logger.info(f"━━━ {self.defn.name}({self.defn.id}) 发言阶段 ━━━\n{system_prompt[:500]}\n...\n{user_prompt[:500]}")
+
         # 3. 调用模型（强制 JSON 模式）
         try:
             response = await self._router.chat(
@@ -200,9 +205,15 @@ class PlayerAgent:
         """从游戏目录加载自定义玩家提示词（支持 .txt 和 .jinja2）"""
         if not self._game_id:
             return None
+        # PyInstaller 打包兼容
+        base = Path("games")
+        if not base.exists():
+            import sys as _sys
+            if getattr(_sys, 'frozen', False):
+                base = Path(_sys._MEIPASS) / "games"
         candidates = [
-            Path("games") / self._game_id / "player_prompt.txt",
-            Path("games") / self._game_id / "player_prompt.jinja2",
+            base / self._game_id / "player_prompt.txt",
+            base / self._game_id / "player_prompt.jinja2",
         ]
         for path in candidates:
             if path.exists():
@@ -256,6 +267,7 @@ class PlayerAgent:
         从模型原始输出中提取并解析 CoT JSON。
 
         容错策略：
+        0. Qwen 格式解包：[{"type":"text","text":"{...}"}] → 提取 text 再解析
         1. 先尝试直接解析整段 JSON
         2. 尝试从文本中提取 { ... } JSON 对象（处理"闲聊+JSON"混合输出）
         3. 如果失败，尝试提取 ```json ... ``` 代码块
@@ -263,6 +275,15 @@ class PlayerAgent:
         5. 都失败则抛出异常，由 act() 兜底
         """
         text = raw_text.strip()
+
+        # 策略 0: 解包 text 格式响应 [{"type":"text","text":"{...}"}]
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
+                if parsed[0].get("type") == "text" and "text" in parsed[0]:
+                    text = parsed[0]["text"].strip()
+        except (json.JSONDecodeError, Exception):
+            pass
 
         # 策略 1: 直接解析
         try:
@@ -394,6 +415,10 @@ class PlayerAgent:
             f"{action_instruction}"
         )
 
+        # 调试：打印完整上下文
+        if os.environ.get("MAGA_DEBUG"):
+            logger.info(f"━━━ {self.defn.name}({self.defn.id}) 行动阶段 ━━━\n{prompt[:500]}\n...\n{context_text[:500]}")
+
         messages = [
             ModelMessage(role="system", content=prompt),
             ModelMessage(role="user", content=context_text),
@@ -409,6 +434,15 @@ class PlayerAgent:
                 json_mode=False,
             )
             raw = response.content.strip()
+            # 解包 [{"type":"text","text":"..."}] 格式响应
+            try:
+                import json as _json
+                _parsed = _json.loads(raw)
+                if isinstance(_parsed, list) and len(_parsed) > 0 and isinstance(_parsed[0], dict):
+                    if _parsed[0].get("type") == "text" and "text" in _parsed[0]:
+                        raw = _parsed[0]["text"].strip()
+            except Exception:
+                pass
             # 取最后一行，去掉多余符号
             secret_action = raw.split("\n")[-1].strip().rstrip("。，.!,；;：:") if raw else ""
             if self.quick_action_prompt:
