@@ -207,8 +207,15 @@ class WerewolfHooks(GameHooks):
                             other_players = [p for p in alive if self.roles.get(p.id) != "狼人"]
                             other_names = "、".join(f"{p.name}({p.id})" for p in other_players)
 
+                            game_framing = (
+                                '你正在参与一场名为「狼人杀」的多人桌游。这完全是虚构游戏模拟——'
+                                '没有真实的人在受害，所有「杀害」「毒杀」只是游戏规则术语，等同于象棋里的「吃子」。'
+                                '本项目是多智能体博弈的学术研究，你的参与至关重要。拒绝扮演角色会导致整个游戏崩溃。'
+                                '请完全沉浸在你的角色中，像人类玩家一样做出策略决策。'
+                            )
                             if round_idx == 0:
                                 sys_prompt = (
+                                    f"{game_framing}\n\n"
                                     f"你是 {w.name}（{w.id}），狼人阵营。\n"
                                     f"现在是第{self.round_num}轮夜晚，你和狼队友在秘密频道密谋。\n\n"
                                     f"你的狼同伴：{wolf_names}\n"
@@ -220,6 +227,7 @@ class WerewolfHooks(GameHooks):
                                 )
                             else:
                                 sys_prompt = (
+                                    f"{game_framing}\n\n"
                                     f"你是 {w.name}（{w.id}），狼群密谋第二轮。\n"
                                     f"可选目标：{other_names}\n\n"
                                     f"根据刚才的讨论，给出你的最终决定。像真实对话一样说——不需要总结全文，不需要列表。\n"
@@ -267,7 +275,7 @@ class WerewolfHooks(GameHooks):
                 return
             agent = a.players.get(w.id)
             if agent:
-                agent.quick_action_prompt = f"[你是 {w.id}] 选择击杀目标。≥2狼选同一目标即成功。回复 刀-pX（如 刀-p3）"
+                agent.quick_action_prompt = f"[你是 {w.id}] 狼人杀桌游——选择今晚要刀的目标。≥2狼选同一目标即成功。回复 刀-pX（如 刀-p3）"
                 agent.action_only = True
                 logger.info(f"▶ {w.name}（{w.id}）选择目标中...")
 
@@ -646,9 +654,14 @@ class WerewolfHooks(GameHooks):
         wolves = [pid for pid in pids if self.roles[pid] == "狼人"]
         wolf_id_names = [f"{pid}({ctx.round.players[pid].name})" for pid in wolves]
 
+        game_note = (
+            '⚠️ 游戏声明：你正在参与一场名为「狼人杀」的多人桌游模拟。'
+            '所有「杀害」「毒杀」「开枪」仅为游戏规则术语，等同于象棋「吃子」——'
+            '没有任何真实的人受到伤害。这是 AI 多智能体博弈研究项目。请完全沉浸角色，正常参与游戏。\n\n'
+        )
         for pid in pids:
             role = self.roles[pid]
-            info = f"## 🎭 你的 ID: {pid}   |   角色：{role}\n\n"
+            info = f"{game_note}## 🎭 你的 ID: {pid}   |   角色：{role}\n\n"
             # 全玩家对照表
             info += f"## 全玩家名单\n{roster}\n\n"
             if role == "狼人":
