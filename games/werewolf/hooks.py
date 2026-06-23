@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import Optional
 
 from engine.hooks import GameHooks
-from engine.schema import CoTOutput, CriticalEvent, ModelMessage
+from engine.schema import CoTOutput, CriticalEvent, ModelMessage, WSEventType
 
 logging.basicConfig(level=logging.INFO, format="[WW] %(message)s", force=True)
 logger = logging.getLogger("maga.ww")
@@ -302,6 +302,12 @@ class WerewolfHooks(GameHooks):
                         if candidates:
                             pick = random.choice(candidates)
                             logger.info(f"  ⚠️ {w.name} 解析失败，随机选择: {pick}")
+                            # 通知狼人：你的刀人格式不对，系统随机帮你选了一个
+                            raw_wolf = cot.secret_action.strip()
+                            self.memory.add_private(w.id,
+                                f"⚠️ 你的刀人目标未被系统识别（你的回复：{raw_wolf[:80]}）。"
+                                f"系统随机选了你今晚的目标：{ctx.round.players[pick].name}({pick})。"
+                                f"下次请使用正确格式：刀-pX（如 刀-p3）。")
 
                     if pick:
                         wolf_votes[pick] += 1
@@ -355,7 +361,9 @@ class WerewolfHooks(GameHooks):
                             if attempt == 2:
                                 raise
                             logger.info(f"  🔮 预言家请求失败（attempt {attempt+1}/3），重试...")
-                    target_id = self._parse_pick(cot.secret_action, alive)
+                    raw_seer = cot.secret_action.strip()
+                    logger.info(f"  🔮 预言家 {seer.name}({seer.id}) raw=[{raw_seer[:120]}]")
+                    target_id = self._parse_pick(raw_seer, alive)
                     if target_id:
                         is_wolf = self.roles.get(target_id) == "狼人"
                         label = "狼人（坏人）" if is_wolf else "好人"
@@ -367,7 +375,14 @@ class WerewolfHooks(GameHooks):
                                              f"查验 {target_id}({tname}) → {label}",
                                              target_id=target_id, round_num=self.round_num)
                     else:
-                        logger.info(f"✓ 预言家 {seer.name}({seer.id}): 未选择目标")
+                        # 解析失败：通知预言家技能未生效，防止白天瞎编查验结果
+                        fail_msg = (
+                            f"⚠️ 你的查验未能被系统记录。你的回复格式不正确。\n"
+                            f"你的回复：{raw_seer[:100]}\n"
+                            f"正确格式：验-pX（如 验-p5）。请下次使用正确格式。"
+                        )
+                        self.memory.add_private(seer.id, fail_msg)
+                        logger.info(f"⚠️ 预言家 {seer.name}({seer.id}) 解析失败: raw=[{raw_seer[:120]}]")
                 except Exception:
                     logger.info(f"✗ 预言家 {seer.name}({seer.id}) 查验失败（3次重试耗尽）")
                 agent.action_only = False
@@ -428,6 +443,10 @@ class WerewolfHooks(GameHooks):
                         await a.night_action("witch_action", witch.id, witch.name,
                                              f"使用解药，救活 {vname}({wolf_target})",
                                              target_id=wolf_target, round_num=self.round_num)
+                        # 持久化：通知女巫药水已用
+                        self.memory.add_private(witch.id,
+                            f"🧪 你今晚使用了【解药】，救活了 {vname}({wolf_target})。解药已用完。"
+                            f"毒药状态：{'可用' if self.witch_poison else '已用完'}。")
                         wolf_target = None
                     elif use_poison and self.witch_poison and not skip_action:
                         poison_target = self._parse_pick(raw, alive)
@@ -438,6 +457,10 @@ class WerewolfHooks(GameHooks):
                             await a.night_action("witch_action", witch.id, witch.name,
                                                  f"使用毒药，毒杀 {pname}({poison_target})",
                                                  target_id=poison_target, round_num=self.round_num)
+                            # 持久化：通知女巫药水已用
+                            self.memory.add_private(witch.id,
+                                f"🧪 你今晚使用了【毒药】，毒杀了 {pname}({poison_target})。毒药已用完。"
+                                f"解药状态：{'可用' if self.witch_antidote else '已用完'}。")
                             # 毒药致死
                             p = ctx.round.players[poison_target]
                             if p.is_alive:
@@ -446,12 +469,29 @@ class WerewolfHooks(GameHooks):
                                     logger.info(f"🔫 猎人 {p.name} 被毒死，不能开枪")
                                 self._night_deaths.append(poison_target)
                                 a.eliminate(ctx, poison_target)
+                        elif not poison_target:
+                            # 想毒人但目标解析失败
+                            self.memory.add_private(witch.id,
+                                f"⚠️ 你试图使用毒药，但目标ID解析失败。你的回复：{raw[:100]}\n"
+                                f"正确格式：毒-pX（如 毒-p7）。毒药未被消耗。")
+                            logger.info(f"⚠️ 女巫毒人目标解析失败: raw=[{raw[:120]}]")
                     elif skip_action:
                         logger.info(f"  → 女巫选择跳过，不使用药水")
+                        self.memory.add_private(witch.id,
+                            f"🧪 你今晚选择跳过，不使用药水。"
+                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
                     else:
+                        # 回复模棱两可，技能未生效，必须告知防止幻觉
                         logger.info(f"  → 女巫未明确行动，跳过")
+                        self.memory.add_private(witch.id,
+                            f"⚠️ 你的回复未能被系统识别，今晚未执行任何药水操作。你的回复：{raw[:100]}\n"
+                            f"正确格式：救（使用解药）、毒-pX（使用毒药）、跳过（不用药）。\n"
+                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
                 except Exception:
                     logger.info(f"✗ 女巫 {witch.name}({witch.id}) 行动失败（3次重试耗尽）")
+                    self.memory.add_private(witch.id,
+                        f"⚠️ 你的药水操作因网络错误未能执行。本晚你的药水未被消耗。"
+                        f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
                 agent.action_only = False
                 agent.quick_action_prompt = None
                 # 🔍 女巫上下文——检查是否收到死讯/毒药提示
@@ -542,30 +582,43 @@ class WerewolfHooks(GameHooks):
                         if attempt == 2:
                             raise
                         logger.info(f"  🔫 猎人请求失败（attempt {attempt+1}/3），重试...")
-                target = self._parse_pick(cot.secret_action, alive)
-                if target and target != hunter_id:
-                    victim = ctx.round.players[target]
-                    if victim.is_alive:
-                        logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 开枪带走 {victim.name}({target})")
-                        await a.night_action("hunter_shoot", hunter_id, hunter.name,
-                                             f"开枪带走 {victim.name}({target})",
-                                             target_id=target, round_num=self.round_num)
-                        ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪带走了 {victim.name}！")
-                        if death_log is not None:
-                            death_log.append(target)
-                        # 记录夜晚死亡
-                        if hasattr(self, '_night_deaths'):
-                            self._night_deaths.append(target)
-                        a.eliminate(ctx, target)
-                else:
+                raw_hunter = cot.secret_action.strip()
+                logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) raw=[{raw_hunter[:120]}]")
+                # 区分"压枪"和格式错误
+                if "压枪" in raw_hunter:
                     logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 选择压枪，不开枪")
                     await a.night_action("hunter_shoot", hunter_id, hunter.name,
                                          "选择压枪，不开枪", round_num=self.round_num)
                     ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 选择压枪，不开枪")
+                else:
+                    target = self._parse_pick(raw_hunter, alive)
+                    if target and target != hunter_id:
+                        victim = ctx.round.players[target]
+                        if victim.is_alive:
+                            logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 开枪带走 {victim.name}({target})")
+                            await a.night_action("hunter_shoot", hunter_id, hunter.name,
+                                                 f"开枪带走 {victim.name}({target})",
+                                                 target_id=target, round_num=self.round_num)
+                            ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪带走了 {victim.name}！")
+                            if death_log is not None:
+                                death_log.append(target)
+                            if hasattr(self, '_night_deaths'):
+                                self._night_deaths.append(target)
+                            a.eliminate(ctx, target)
+                    else:
+                        # 既不是压枪，也解析不出目标——格式错误，默认压枪
+                        logger.info(f"  ⚠️ 猎人 {hunter.name}({hunter_id}) 格式错误，默认压枪: raw=[{raw_hunter[:120]}]")
+                        await a.night_action("hunter_shoot", hunter_id, hunter.name,
+                                             "格式错误，默认压枪", round_num=self.round_num)
+                        ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪失败（格式错误），默认压枪")
+                        self.memory.add_private(hunter_id,
+                            f"⚠️ 你的开枪目标未能被系统识别（回复：{raw_hunter[:80]}）。已默认压枪。"
+                            f"正确格式：枪-pX（如 枪-p2）或 压枪。")
             except Exception:
                 logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 开枪失败（3次重试耗尽），默认压枪")
                 ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪失败，默认压枪")
-                pass
+                self.memory.add_private(hunter_id,
+                    f"⚠️ 你的开枪操作因网络错误未能执行，已默认压枪。")
             agent.action_only = False
             agent.quick_action_prompt = None
 
@@ -626,6 +679,13 @@ class WerewolfHooks(GameHooks):
             if speech:
                 ctx.round.public_log.append(f"📜 {player.name}({player.id}) 的遗言：{speech}")
                 self.memory.add_public(player.id, f"📜 {player.name}({player.id}) 的遗言：{speech}")
+                # 推送到前端发言区，让遗言像正常发言一样显示在玩家卡片上
+                await self.arena._emit(WSEventType.PLAYER_SPEECH, {
+                    "player_id": player.id,
+                    "player_name": player.name,
+                    "speech": f"📜 遗言：{speech}",
+                    "round": ctx.round.round_number,
+                })
                 logger.info(f"📜 {player.name}({player.id}) 遗言: {speech[:200]}")
 
             agent.action_only = False
