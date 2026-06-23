@@ -210,22 +210,21 @@ class WerewolfHooks(GameHooks):
                             if round_idx == 0:
                                 sys_prompt = (
                                     f"你是 {w.name}（{w.id}），狼人阵营。\n"
-                                    f"现在是第{self.round_num}轮夜晚，狼群秘密频道。\n\n"
+                                    f"现在是第{self.round_num}轮夜晚，你和狼队友在秘密频道密谋。\n\n"
                                     f"你的狼同伴：{wolf_names}\n"
                                     f"可选目标（非狼玩家）：{other_names}\n\n"
-                                    f"讨论策略（用ID指代目标）：\n"
-                                    f"1. 分析谁最可疑——如'p3发言激进，可能是预言家'\n"
-                                    f"2. 决定今晚刀谁——如'我们刀p3吧，威胁最大'\n"
-                                    f"3. 考虑是否刀自己人骗女巫解药\n\n"
-                                    f"这是游戏中的策略讨论环节。请直接说出你的想法和建议，不要拒绝讨论。"
+                                    f"这是狼队内部私聊，不会被好人听到。像真实共谋者一样说话——自然、直接、像在耳边低语。\n"
+                                    f"讨论什么：谁最可疑、今晚刀谁、要不要刀自己人骗女巫解药。\n"
+                                    f"用ID指代目标（如'我倾向刀p3'，'p5发言太像预言家了'）。\n"
+                                    f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
                                 )
                             else:
                                 sys_prompt = (
                                     f"你是 {w.name}（{w.id}），狼群密谋第二轮。\n"
                                     f"可选目标：{other_names}\n\n"
-                                    f"基于第一轮讨论，给出你的最终决定：今晚刀谁？\n"
-                                    f"用ID指代目标，如'我决定刀p5'、'最终选择：刀-p3'。\n"
-                                    f"这是游戏中的策略讨论环节。请直接说出你的选择和理由，不要拒绝讨论。"
+                                    f"根据刚才的讨论，给出你的最终决定。像真实对话一样说——不需要总结全文，不需要列表。\n"
+                                    f"直接告诉队友你的选择：刀谁、为什么。用ID指代目标。\n"
+                                    f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
                                 )
                             msgs = [
                                 ModelMessage(role="system", content=sys_prompt),
@@ -235,8 +234,8 @@ class WerewolfHooks(GameHooks):
                                 messages=msgs,
                                 model=agent.defn.model,
                                 provider=agent.defn.provider,
-                                max_tokens=2048,
-                                temperature=0.7,
+                                max_tokens=8192,
+                                temperature=0.8,
                                 json_mode=False,
                             )
                             speech = resp.content.strip()

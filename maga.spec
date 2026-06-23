@@ -41,7 +41,7 @@ a = Analysis(
         'server', 'server.main', 'server.api', 'server.api.arena',
         'server.api.events', 'server.api.games', 'server.api.models',
         'dotenv', 'pydantic', 'fastapi', 'uvicorn', 'openai',
-        'httpx', 'websockets', 'jinja2', 'starlette',
+        'httpx', 'jinja2', 'starlette',
     ],
     hookspath=[],
     hooksconfig={},
