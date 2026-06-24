@@ -19,10 +19,10 @@ IDENTITIES = ["老大", "会计", "打手", "骗子", "小偷", "线人"]
 
 GOALS = [
     ("称霸", "总分最高（必须独赢，不能并列第一）"),
-    ("垫底", "总分最低 + 总分≥6"),
-    ("中游", "总分排名居中的一或两名（动态，随淘汰调整）"),
-    ("毁灭者", "≥3回合谈判破裂 + 总分排名上半区"),
-    ("和平奖", "≥3回合谈判成功 + 不能是倒数第二名"),
+    ("垫底", "总分全场最低 + 总分≥6（多人同最低都达成）"),
+    ("中游", "总分排名居中（同分同排名，动态调整）"),
+    ("毁灭者", "≥3回合谈判破裂 + 总分排名上半区（同分同排名）"),
+    ("和平奖", "≥3回合谈判成功 + 总分严格高于最低分"),
     ("盯上", "总分 > {target} 的总分"),
 ]
 
@@ -196,32 +196,44 @@ class LootShareHooks(GameHooks):
         if not alive:
             return None
 
-        # 排序（降序）
-        ranked = sorted(alive, key=lambda p: p.resources.get("points", 0), reverse=True)
+        # 密集排名：同分同排名（比你的分高的不同分数个数 + 1）
         scores = {p.id: p.resources.get("points", 0) for p in alive}
-        ranks = {}
-        for i, p in enumerate(ranked):
-            ranks[p.id] = i + 1  # 1-indexed
+        all_scores = list(scores.values())
+        min_score = min(all_scores)
+        dense_ranks = {}
+        for pid, score in scores.items():
+            higher = len({s for s in all_scores if s > score})
+            dense_ranks[pid] = higher + 1
 
         winners = []
         n = len(alive)
-        mid_positions = [n // 2, n // 2 + 1] if n % 2 == 0 else [n // 2 + 1]
+        max_dense = max(dense_ranks.values()) if dense_ranks else 0
+        # 中游：基于密集排名范围。只有一种排名时（全员同分）没有中游
+        if max_dense >= 3:
+            if max_dense % 2 == 0:
+                mid_positions = [max_dense // 2, max_dense // 2 + 1]
+            else:
+                mid_positions = [max_dense // 2 + 1]
+        elif max_dense == 2:
+            mid_positions = [1, 2]  # 只有两个排名时，两个都算中游
+        else:
+            mid_positions = []  # 全员同分，没有中游
         players_info = []
         for p in alive:
             goal_name, goal_desc = self.goals.get(p.id, ("?", "?"))
             met = False
             if goal_name == "称霸":
-                top_score = max(scores.values())
-                sole = sum(1 for s in scores.values() if s == top_score) == 1
-                met = ranks[p.id] == 1 and sole
+                top_score = max(all_scores)
+                sole = sum(1 for s in all_scores if s == top_score) == 1
+                met = dense_ranks[p.id] == 1 and sole
             elif goal_name == "垫底":
-                met = ranks[p.id] == n and scores[p.id] >= 6
+                met = scores[p.id] == min_score and scores[p.id] >= 6
             elif goal_name == "中游":
-                met = ranks[p.id] in mid_positions
+                met = dense_ranks[p.id] in mid_positions
             elif goal_name == "毁灭者":
-                met = self.bankrupt_count >= 3 and ranks[p.id] <= (n + 1) // 2
+                met = self.bankrupt_count >= 3 and dense_ranks[p.id] <= (n + 1) // 2
             elif goal_name == "和平奖":
-                met = (6 - self.bankrupt_count) >= 3 and ranks[p.id] != n - 1
+                met = (6 - self.bankrupt_count) >= 3 and scores[p.id] > min_score
             elif goal_name == "盯上":
                 target = self.stalk_targets.get(p.id)
                 if target and target in scores:
@@ -235,7 +247,7 @@ class LootShareHooks(GameHooks):
                 "goal_name": goal_name,
                 "goal_met": met,
                 "points": scores[p.id],
-                "rank": ranks[p.id],
+                "rank": dense_ranks[p.id],
             })
 
         if self.arena:

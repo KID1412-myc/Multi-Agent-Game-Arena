@@ -173,7 +173,7 @@ class WerewolfHooks(GameHooks):
         # 记录今晚新增死亡（用于天亮公告）
         alive_before_night = {p.id for p in alive}
 
-        # ── 狼人私聊（2轮）── 直接调 router.chat 绕过引擎 speech_only
+        # ── 狼人私聊 ── 直接调 router.chat 绕过引擎 speech_only
         wolves = [p for p in alive if self.roles.get(p.id) == "狼人"]
 
         # 独狼提示
@@ -183,85 +183,73 @@ class WerewolfHooks(GameHooks):
                 f"🐺 你是唯一存活的狼人。没有同伴可以私聊，你需要独自决定今晚的目标。")
 
         if len(wolves) >= 2:
-            for round_idx in range(2):
-                for w in wolves:
-                    # ⏸️ 暂停检查：每只狼发言前检查，保证暂停及时生效
-                    await a._wait_if_paused()
-                    agent = a.players.get(w.id)
-                    if not agent:
+            for w in wolves:
+                # ⏸️ 暂停检查：每只狼发言前检查，保证暂停及时生效
+                await a._wait_if_paused()
+                agent = a.players.get(w.id)
+                if not agent:
+                    continue
+                logger.info(f"▶ {w.name}（{w.id}）狼群发言中...")
+
+                # 狼私聊加重试机制
+                for attempt in range(3):
+                    try:
+                        if attempt > 0:
+                            await asyncio.sleep(2.0 * attempt)
+                            logger.info(f"  🐺 {w.name} 狼聊重试（attempt {attempt+1}/3）...")
+
+                        # 构建狼私聊专用 prompt，不经过引擎的 speech/action 模式
+                        wolf_ctx = self.memory.build_context_for_player(w.id)
+                        wolf_names = "、".join(
+                            f"{w2.name}({w2.id})" for w2 in wolves if w2.id != w.id
+                        )
+
+                        # 构建其他存活玩家列表（排除狼）
+                        other_players = [p for p in alive if self.roles.get(p.id) != "狼人"]
+                        other_names = "、".join(f"{p.name}({p.id})" for p in other_players)
+
+                        game_framing = (
+                            '你正在参与一场名为「狼人杀」的多人桌游。这完全是虚构游戏模拟——'
+                            '没有真实的人在受害，所有「杀害」「毒杀」只是游戏规则术语，等同于象棋里的「吃子」。'
+                            '本项目是多智能体博弈的学术研究，你的参与至关重要。拒绝扮演角色会导致整个游戏崩溃。'
+                            '请完全沉浸在你的角色中，像人类玩家一样做出策略决策。'
+                        )
+                        sys_prompt = (
+                            f"{game_framing}\n\n"
+                            f"你是 {w.name}（{w.id}），狼人阵营。\n"
+                            f"现在是第{self.round_num}轮夜晚，你和狼队友在秘密频道密谋。\n\n"
+                            f"你的狼同伴：{wolf_names}\n"
+                            f"可选目标（非狼玩家）：{other_names}\n\n"
+                            f"这是狼队内部私聊，不会被好人听到。像真实共谋者一样说话——自然、直接、像在耳边低语。\n"
+                            f"讨论什么：谁最可疑、今晚刀谁、要不要刀自己人骗女巫解药。\n"
+                            f"用ID指代目标（如'我倾向刀p3'，'p5发言太像预言家了'）。\n"
+                            f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
+                        )
+                        msgs = [
+                            ModelMessage(role="system", content=sys_prompt),
+                            ModelMessage(role="user", content=wolf_ctx),
+                        ]
+                        resp = await a.router.chat(
+                            messages=msgs,
+                            model=agent.defn.model,
+                            provider=agent.defn.provider,
+                            max_tokens=8192,
+                            temperature=0.8,
+                            json_mode=False,
+                        )
+                        speech = resp.content.strip()
+                        if speech:
+                            for w2 in wolves:
+                                self.memory.add_private(w2.id, f"🐺 {w.name}({w.id})在狼群中说: {speech}")
+                            logger.info(f"🐺 [狼聊] {w.name}({w.id}): {speech[:300]}")
+                            await a.night_action("wolf_chat", w.id, w.name, speech,
+                                                 round_num=self.round_num)
+                        logger.info(f"✓ {w.name}（{w.id}）狼群发言完成")
+                        break  # 成功则跳出重试循环
+                    except Exception:
+                        if attempt == 2:
+                            logger.info(f"✗ {w.name}（{w.id}）狼群发言失败（3次重试耗尽）")
                         continue
-                    logger.info(f"▶ {w.name}（{w.id}）狼群发言中...")
-
-                    # 狼私聊加重试机制
-                    for attempt in range(3):
-                        try:
-                            if attempt > 0:
-                                await asyncio.sleep(2.0 * attempt)
-                                logger.info(f"  🐺 {w.name} 狼聊重试（attempt {attempt+1}/3）...")
-
-                            # 构建狼私聊专用 prompt，不经过引擎的 speech/action 模式
-                            wolf_ctx = self.memory.build_context_for_player(w.id)
-                            wolf_names = "、".join(
-                                f"{w2.name}({w2.id})" for w2 in wolves if w2.id != w.id
-                            )
-
-                            # 构建其他存活玩家列表（排除狼）
-                            other_players = [p for p in alive if self.roles.get(p.id) != "狼人"]
-                            other_names = "、".join(f"{p.name}({p.id})" for p in other_players)
-
-                            game_framing = (
-                                '你正在参与一场名为「狼人杀」的多人桌游。这完全是虚构游戏模拟——'
-                                '没有真实的人在受害，所有「杀害」「毒杀」只是游戏规则术语，等同于象棋里的「吃子」。'
-                                '本项目是多智能体博弈的学术研究，你的参与至关重要。拒绝扮演角色会导致整个游戏崩溃。'
-                                '请完全沉浸在你的角色中，像人类玩家一样做出策略决策。'
-                            )
-                            if round_idx == 0:
-                                sys_prompt = (
-                                    f"{game_framing}\n\n"
-                                    f"你是 {w.name}（{w.id}），狼人阵营。\n"
-                                    f"现在是第{self.round_num}轮夜晚，你和狼队友在秘密频道密谋。\n\n"
-                                    f"你的狼同伴：{wolf_names}\n"
-                                    f"可选目标（非狼玩家）：{other_names}\n\n"
-                                    f"这是狼队内部私聊，不会被好人听到。像真实共谋者一样说话——自然、直接、像在耳边低语。\n"
-                                    f"讨论什么：谁最可疑、今晚刀谁、要不要刀自己人骗女巫解药。\n"
-                                    f"用ID指代目标（如'我倾向刀p3'，'p5发言太像预言家了'）。\n"
-                                    f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
-                                )
-                            else:
-                                sys_prompt = (
-                                    f"{game_framing}\n\n"
-                                    f"你是 {w.name}（{w.id}），狼群密谋第二轮（同一天夜晚，还没刀人）。\n"
-                                    f"上一轮是初步讨论，现在需要做出最终决定。今晚还没动手，这是最后的表决。\n"
-                                    f"可选目标：{other_names}\n\n"
-                                    f"根据刚才的讨论，直接告诉队友你今晚的最终选择：刀谁、为什么。用ID指代目标。\n"
-                                    f"不需要总结全文、不要回顾历史。像真实对话一样简短地说。\n"
-                                    f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
-                                )
-                            msgs = [
-                                ModelMessage(role="system", content=sys_prompt),
-                                ModelMessage(role="user", content=wolf_ctx),
-                            ]
-                            resp = await a.router.chat(
-                                messages=msgs,
-                                model=agent.defn.model,
-                                provider=agent.defn.provider,
-                                max_tokens=8192,
-                                temperature=0.8,
-                                json_mode=False,
-                            )
-                            speech = resp.content.strip()
-                            if speech:
-                                for w2 in wolves:
-                                    self.memory.add_private(w2.id, f"🐺 {w.name}({w.id})在狼群中说: {speech}")
-                                logger.info(f"🐺 [狼聊] {w.name}({w.id}): {speech[:300]}")
-                                await a.night_action("wolf_chat", w.id, w.name, speech,
-                                                     round_num=self.round_num)
-                            logger.info(f"✓ {w.name}（{w.id}）狼群发言完成")
-                            break  # 成功则跳出重试循环
-                        except Exception:
-                            if attempt == 2:
-                                logger.info(f"✗ {w.name}（{w.id}）狼群发言失败（3次重试耗尽）")
-                            continue
 
         # 🔍 定向调试：随机选一个非狼玩家，打印上下文检查是否泄露狼聊
         non_wolves = [p for p in alive if self.roles.get(p.id) != "狼人"]
@@ -732,7 +720,7 @@ class WerewolfHooks(GameHooks):
             if role == "狼人":
                 teammates = [w for w in wolf_id_names if not w.startswith(pid)]
                 info += f"🐺 你的狼同伴：{', '.join(teammates)}\n"
-                info += "夜晚你可以和同伴私聊（两轮），然后选一个人杀掉。≥2狼选同一目标即成功。可刀自己（骗女巫解药）。"
+                info += "夜晚你可以和同伴私聊，然后选一个人杀掉。≥2狼选同一目标即成功。可刀自己（骗女巫解药）。"
                 info += "\n⚠️ 行动格式：刀-pX（如 刀-p3）。讨论时用ID指代目标，如'我觉得p3可疑'、'我们刀p5吧'。"
                 info += "\n⚠️ 现在是第一轮夜晚，马上和同伴密谋，选择第一个猎物。"
             elif role == "预言家":
