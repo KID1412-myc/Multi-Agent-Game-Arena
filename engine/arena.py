@@ -986,8 +986,8 @@ class Arena:
     # ── 清理 ─────────────────────────────────────────────────────
 
     async def _emit_game_over(self, ctx: GameContext, winner_id: str) -> None:
-        """发送 GAME_OVER 事件，含排名列表"""
-        wids = winner_id.split(",")
+        """发送 GAME_OVER 事件，含排名列表。hooks 可通过 _game_over_extra 注入自定义数据。"""
+        wids = [w for w in winner_id.split(",") if w]
         wnames = [ctx.round.players[wid].name if wid in ctx.round.players else wid for wid in wids]
         # 构建排名列表（按分数降序）
         all_players = sorted(
@@ -996,11 +996,13 @@ class Arena:
             reverse=True,
         )
         ranking = [{"name": p.name, "score": p.resources.get("gold", p.resources.get("points", 0))} for p in all_players]
-        logger.info(f"🏆 游戏结束！胜者: {', '.join(wnames)}")
+        logger.info(f"🏆 游戏结束！胜者: {', '.join(wnames) if wnames else '无'}")
+        extra = getattr(self, '_game_over_extra', {}) or {}
         await self._emit(WSEventType.GAME_OVER, {
             "winner_id": winner_id,
             "winner_name": "、".join(wnames),
             "ranking": ranking,
+            "extra": extra,
         })
 
     async def _teardown(self) -> None:

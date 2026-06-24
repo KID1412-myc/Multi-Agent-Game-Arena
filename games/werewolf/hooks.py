@@ -92,6 +92,7 @@ class WerewolfHooks(GameHooks):
         for choice in vote_result["votes"].values():
             if choice and choice != "弃权":
                 tally[choice] = tally.get(choice, 0) + 1
+        self._vote_tally = tally  # 保存供 _build_dm_brief 使用
 
         # 格式化票型展示
         self._log_vote_tally(ctx, vote_result["votes"], tally, self.round_num)
@@ -765,11 +766,37 @@ class WerewolfHooks(GameHooks):
         wolves_alive = [p for p in alive if self.roles.get(p.id) == "狼人"]
         villagers_alive = [p for p in alive if self.roles.get(p.id) != "狼人"]
 
+        # 构建弹窗数据
+        role_icons = {"狼人": "🐺", "预言家": "🔮", "女巫": "🧪", "猎人": "🔫", "平民": "👤"}
+        players_info = []
+        for p in ctx.round.players.values():
+            role = self.roles.get(p.id, "?")
+            players_info.append({
+                "id": p.id, "name": p.name, "role": role,
+                "icon": role_icons.get(role, ""),
+                "is_alive": p.is_alive,
+                "side": "狼人" if role == "狼人" else "好人",
+            })
+
         if not wolves_alive:
             logger.info("🏆 所有狼人死亡——神职+村民获胜！")
+            if self.arena:
+                self.arena._game_over_extra = {
+                    "game_type": "werewolf",
+                    "winner_side": "好人",
+                    "desc": "所有狼人被消灭",
+                    "players": players_info,
+                }
             return ",".join(p.id for p in villagers_alive)
         if len(wolves_alive) >= len(alive) / 2:
             logger.info("🏆 狼人数量过半——狼人获胜！")
+            if self.arena:
+                self.arena._game_over_extra = {
+                    "game_type": "werewolf",
+                    "winner_side": "狼人",
+                    "desc": f"狼人数量（{len(wolves_alive)}）≥存活人数一半（{len(alive)}）",
+                    "players": players_info,
+                }
             return ",".join(p.id for p in wolves_alive)
         return None
 
@@ -852,12 +879,21 @@ class WerewolfHooks(GameHooks):
             if hasattr(self, '_vote_result') and self._vote_result:
                 passed = self._vote_result.get('passed', False)
                 target = self._vote_result.get('target')
+                tally = getattr(self, '_vote_tally', {})
                 if target and passed:
                     target_name = ctx.round.players[target].name if target in ctx.round.players else target
                     events.append(f"投票结果：{target_name}({target}) 得票过半数，被淘汰")
-                elif target:
-                    target_name = ctx.round.players[target].name if target in ctx.round.players else target
-                    events.append(f"投票结果：{target_name}({target}) 得票最高但未过半，无人淘汰")
+                elif target and tally:
+                    # 找所有得票最高的玩家（含平票）
+                    max_v = max(tally.values()) if tally else 0
+                    top_pids = [pid for pid, cnt in tally.items() if cnt == max_v]
+                    names = "、".join(
+                        f"{ctx.round.players[pid].name}({pid})" for pid in top_pids if pid in ctx.round.players
+                    )
+                    if len(top_pids) > 1:
+                        events.append(f"投票结果：{names} 各 {max_v} 票平票，无人淘汰")
+                    else:
+                        events.append(f"投票结果：{names} 得 {max_v} 票未过半，无人淘汰")
                 else:
                     events.append("投票结果：全部弃权，无人淘汰")
             else:

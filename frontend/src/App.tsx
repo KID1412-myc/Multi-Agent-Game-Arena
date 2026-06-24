@@ -3,6 +3,7 @@ import { GameControlBar } from './components/GameControlBar';
 import { GameSelector } from './components/GameSelector';
 import { ArenaLayout } from './components/ArenaLayout';
 import { CyberBackground } from './components/CyberBackground';
+import { GameOverModal } from './components/GameOverModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useArenaStore } from './store/arenaStore';
 
@@ -18,6 +19,7 @@ export default function App() {
   const gameOverPayload = useArenaStore((s) => s.gameOverPayload);
   const winnerName = gameOverPayload?.winner_name || null;
   const ranking = gameOverPayload?.ranking || [];
+  const extra = gameOverPayload?.extra || null;
 
   // 首次启动检测：没有 .env 则进入配置模式
   useEffect(() => {
@@ -136,34 +138,7 @@ export default function App() {
       </div>
 
       {gameStatus === 'finished' && (
-        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9999,
-                      background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center', minWidth: 300,
-                      border: '2px solid #f59e0b', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 12 }}>
-            {winnerName ? `胜者：${winnerName}` : '游戏结束'}
-          </h2>
-          {ranking.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              {ranking.map((r, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', padding: '4px 12px',
-                  fontSize: 13, fontWeight: r.name === ranking[0].name ? 700 : 400,
-                  color: i === 0 ? '#f59e0b' : '#333',
-                  background: i === 0 ? '#fffbeb' : 'transparent',
-                  borderRadius: 4, marginBottom: 2,
-                }}>
-                  <span>{['🥇','🥈','🥉','4','5','6'][i] || i+1} {r.name}</span>
-                  <span style={{ fontFamily: 'monospace' }}>{r.score} 分</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <button onClick={() => useArenaStore.getState().setGameStatus('idle')}
-            style={{ marginTop: 8, padding: '4px 16px', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#666' }}>
-            关闭
-          </button>
-        </div>
+        <GameOverModal winnerName={winnerName} ranking={ranking} extra={extra} />
       )}
 
       <ArenaLayout />

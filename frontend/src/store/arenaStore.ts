@@ -11,7 +11,7 @@ interface ArenaState {
   // 连接状态
   connected: boolean;
   gameStatus: 'idle' | 'loading' | 'running' | 'paused' | 'round_paused' | 'finished' | 'error';
-  gameOverPayload: { winner_id?: string; winner_name?: string; ranking?: { name: string; score: number }[] } | null;
+  gameOverPayload: { winner_id?: string; winner_name?: string; ranking?: { name: string; score: number }[]; extra?: Record<string, any> } | null;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -28,7 +28,7 @@ interface ArenaState {
   setCtx: (ctx: GameContext) => void;
   setConnected: (v: boolean) => void;
   setGameStatus: (s: ArenaState['gameStatus']) => void;
-  setGameOverPayload: (p: { winner_id?: string; winner_name?: string } | null) => void;
+  setGameOverPayload: (p: { winner_id?: string; winner_name?: string; ranking?: { name: string; score: number }[]; extra?: Record<string, any> } | null) => void;
   addSpeech: (playerId: string, playerName: string, content: string, round: number) => void;
   setSelectedPlayer: (id: string | null) => void;
   toggleCoT: () => void;

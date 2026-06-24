@@ -206,8 +206,9 @@ class LootShareHooks(GameHooks):
         winners = []
         n = len(alive)
         mid_positions = [n // 2, n // 2 + 1] if n % 2 == 0 else [n // 2 + 1]
+        players_info = []
         for p in alive:
-            goal_name, _ = self.goals[p.id]
+            goal_name, goal_desc = self.goals.get(p.id, ("?", "?"))
             met = False
             if goal_name == "称霸":
                 top_score = max(scores.values())
@@ -228,7 +229,20 @@ class LootShareHooks(GameHooks):
             if met:
                 winners.append(p.id)
                 logger.info(f"  {p.name}【{self.identities[p.id]}】达成目标「{goal_name}」✓")
+            players_info.append({
+                "id": p.id, "name": p.name,
+                "identity": self.identities.get(p.id, "?"),
+                "goal_name": goal_name,
+                "goal_met": met,
+                "points": scores[p.id],
+                "rank": ranks[p.id],
+            })
 
+        if self.arena:
+            self.arena._game_over_extra = {
+                "game_type": "loot_share",
+                "players": players_info,
+            }
         return ",".join(winners) if winners else None
 
     # ============================================================

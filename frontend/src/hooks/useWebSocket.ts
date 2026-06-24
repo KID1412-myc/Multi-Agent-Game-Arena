@@ -86,6 +86,8 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
     store.setGameOverPayload({
       winner_id: payload.winner_id as string,
       winner_name: payload.winner_name as string,
+      ranking: payload.ranking as any[],
+      extra: payload.extra as Record<string, any>,
     });
     store.setGameStatus('finished');
   },

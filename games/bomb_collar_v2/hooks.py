@@ -219,25 +219,77 @@ class BombCollarHooks(GameHooks):
         alive = [p for p in ctx.round.players.values() if p.is_alive]
         civilians = [p for p in alive if p.id != self.fraudster_id]
         fraudster = ctx.round.players.get(self.fraudster_id)
+        all_players = ctx.round.players.values()
+
+        # 构建弹窗数据
+        players_info = []
+        for p in all_players:
+            is_fraud = p.id == self.fraudster_id
+            players_info.append({
+                "id": p.id, "name": p.name,
+                "role": "欺诈师" if is_fraud else "平民",
+                "points": p.resources.get("points", 0),
+                "is_alive": p.is_alive,
+            })
+
+        def _set_extra(data: dict):
+            if self.arena:
+                self.arena._game_over_extra = data
 
         # 欺诈师死了 → 平民胜利
         if fraudster and not fraudster.is_alive:
             self.winners = [p.id for p in civilians]
+            accuser = getattr(self, 'accuser_id', None)
+            _set_extra({
+                "game_type": "bomb_collar_v2",
+                "winner_side": "平民",
+                "reason": "欺诈师被淘汰",
+                "fraudster_name": fraudster.name,
+                "fraudster_id": self.fraudster_id,
+                "accuser_id": accuser,
+                "accuser_name": ctx.round.players[accuser].name if accuser and accuser in ctx.round.players else None,
+                "players": players_info,
+            })
             return ",".join(self.winners)
 
         # 连续4轮无人死亡 → 平民共赢
         if self.peace_streak >= PEACE_WIN:
             self.winners = [p.id for p in civilians]
+            _set_extra({
+                "game_type": "bomb_collar_v2",
+                "winner_side": "平民",
+                "reason": f"连续{PEACE_WIN}轮和平，平民共赢",
+                "fraudster_name": fraudster.name if fraudster else "?",
+                "fraudster_id": self.fraudster_id,
+                "players": players_info,
+            })
             return ",".join(self.winners)
 
         # 10轮结束
         if ctx.round.round_number >= ctx.game_config.total_rounds:
             if not civilians:
+                _set_extra({
+                    "game_type": "bomb_collar_v2",
+                    "winner_side": "欺诈师",
+                    "reason": "所有平民被淘汰",
+                    "fraudster_name": fraudster.name if fraudster else "?",
+                    "fraudster_id": self.fraudster_id,
+                    "players": players_info,
+                })
                 return self.fraudster_id
             # 幸存者中积分最高
             candidates = alive
             max_pts = max(p.resources.get("points", 0) for p in candidates)
             self.winners = [p.id for p in candidates if p.resources.get("points", 0) == max_pts]
+            winner_is_fraud = self.fraudster_id in self.winners
+            _set_extra({
+                "game_type": "bomb_collar_v2",
+                "winner_side": "欺诈师" if winner_is_fraud else "平民",
+                "reason": f"10轮结束，{'欺诈师积分最高' if winner_is_fraud else '平民积分最高或并列'}",
+                "fraudster_name": fraudster.name if fraudster else "?",
+                "fraudster_id": self.fraudster_id,
+                "players": players_info,
+            })
             return ",".join(self.winners)
 
         return None
@@ -351,6 +403,7 @@ class BombCollarHooks(GameHooks):
             if passed:
                 if target_id == self.fraudster_id:
                     logger.info("审判成功！欺诈师被指认淘汰。")
+                    self.accuser_id = accuser_id  # 保存指认者，游戏结束弹窗用
                     accuser.resources["points"] = accuser.resources.get("points", 0) + 4
                     a.eliminate(ctx, self.fraudster_id)
                     ctx.round.public_log.append(f"✅ 审判通过！{target_name} 确认为欺诈师，淘汰！{accuser.name} +4分")
