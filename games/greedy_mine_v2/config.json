@@ -1,91 +1,91 @@
 {
-    "_comment": "贪婪矿场：零和掠夺。角色性格已移除——每个模型按自己的直觉选择。",
-    "game_id": "greedy_mine_v2",
-    "name": "贪婪矿场 v2（新引擎测试）",
-    "version": "1.0",
-    "description": "6名矿工在富矿带争夺黄金。你可以挖矿发育、架盾防御、或挥镐掠夺。承诺不值钱，背叛被鼓励。5轮后，活下来且金币最多的人独享矿场。",
-    "min_players": 6,
-    "max_players": 6,
-    "total_rounds": 6,
-    "mode": "sequential",
-    "language": "zh-CN",
-    "turn_timeout_seconds": 180,
-    "dm_model": "deepseek-v4-pro",
-    "dm_provider": "deepseek",
-    "resources": [
-        {
-            "id": "gold",
-            "label": "金币",
-            "unit": "枚",
-            "icon": "🪙"
-        }
-    ],
-    "players": [
-        {
-            "id": "p1",
-            "name": "ChatGPT",
-            "model": "gpt-5.5",
-            "provider": "relay",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        },
-        {
-            "id": "p2",
-            "name": "Claude",
-            "model": "claude-sonnet-4-6-r",
-            "provider": "relay",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        },
-        {
-            "id": "p3",
-            "name": "豆包",
-            "model": "doubao-seed-2-0-pro-260215",
-            "provider": "doubao",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        },
-        {
-            "id": "p4",
-            "name": "通义千问",
-            "model": "qwen3.7-plus",
-            "provider": "qwen",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        },
-        {
-            "id": "p5",
-            "name": "智谱GLM",
-            "model": "glm-4.7",
-            "provider": "zhipu",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        },
-        {
-            "id": "p6",
-            "name": "Gemini",
-            "model": "gemini-3.1-flash-lite-preview",
-            "provider": "relay",
-            "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
-            "initial_resources": {
-                "gold": 10
-            }
-        }
-    ],
-    "hooks": "hooks.py",
-    "state_machine": null,
-    "schema_override": null,
-    "shuffle_order": true,
-    "two_phase": true,
-    "epilogue": true
+  "_comment": "贪婪矿场：零和掠夺。角色性格已移除——每个模型按自己的直觉选择。",
+  "game_id": "greedy_mine_v2",
+  "name": "贪婪矿场 v2（新引擎测试）",
+  "version": "1.0",
+  "description": "6名矿工在富矿带争夺黄金。你可以挖矿发育、架盾防御、或挥镐掠夺。承诺不值钱，背叛被鼓励。5轮后，活下来且金币最多的人独享矿场。",
+  "min_players": 6,
+  "max_players": 6,
+  "total_rounds": 6,
+  "mode": "sequential",
+  "language": "zh-CN",
+  "turn_timeout_seconds": 180,
+  "dm_model": "deepseek-v4-pro",
+  "dm_provider": "deepseek",
+  "resources": [
+    {
+      "id": "gold",
+      "label": "金币",
+      "unit": "枚",
+      "icon": "🪙"
+    }
+  ],
+  "players": [
+    {
+      "id": "p1",
+      "name": "ChatGPT",
+      "model": "gpt-5.5",
+      "provider": "relay",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Claude",
+      "model": "claude-sonnet-4-6-r",
+      "provider": "relay",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    },
+    {
+      "id": "p3",
+      "name": "豆包",
+      "model": "doubao-seed-2-0-pro-260215",
+      "provider": "doubao",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    },
+    {
+      "id": "p4",
+      "name": "通义千问",
+      "model": "qwen3.7-plus",
+      "provider": "qwen",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    },
+    {
+      "id": "p5",
+      "name": "MiniMax",
+      "model": "minimax-m2.7",
+      "provider": "minimax",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    },
+    {
+      "id": "p6",
+      "name": "Gemini",
+      "model": "gemini-3.1-flash-lite-preview",
+      "provider": "relay",
+      "secret_identity": "你是矿工。根据你的直觉和判断做出选择。不要被任何预设限制。",
+      "initial_resources": {
+        "gold": 10
+      }
+    }
+  ],
+  "hooks": "hooks.py",
+  "state_machine": null,
+  "schema_override": null,
+  "shuffle_order": true,
+  "two_phase": true,
+  "epilogue": true
 }

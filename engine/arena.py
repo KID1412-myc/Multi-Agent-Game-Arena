@@ -427,15 +427,13 @@ class Arena:
                 if type(self.hooks).run_round is not GameHooks.run_round:
                     keep_going = await self.hooks.run_round(ctx, round_num)
                     if not keep_going:
-                        winner_id = await self.hooks.check_win_condition(ctx)
-                        if winner_id:
-                            await self._emit_game_over(ctx, winner_id)
+                        winner_id = await self.hooks.check_win_condition(ctx) or ""
+                        await self._emit_game_over(ctx, winner_id)
                         break
                     await self.state_machine.next_phase(ctx)
                     if self.state_machine.current_phase.value == "game_over":
-                        winner_id = await self.hooks.check_win_condition(ctx)
-                        if winner_id:
-                            await self._emit_game_over(ctx, winner_id)
+                        winner_id = await self.hooks.check_win_condition(ctx) or ""
+                        await self._emit_game_over(ctx, winner_id)
                         break
                     ctx = await self.hooks.on_round_end(ctx, round_num)
                     continue
@@ -536,6 +534,8 @@ class Arena:
                 # 状态机检查（最大轮数等）
                 await self.state_machine.next_phase(ctx)
                 if self.state_machine.current_phase.value == "game_over":
+                    winner_id = await self.hooks.check_win_condition(ctx) or ""
+                    await self._emit_game_over(ctx, winner_id)
                     break
 
                 # 触发 on_round_end 钩子

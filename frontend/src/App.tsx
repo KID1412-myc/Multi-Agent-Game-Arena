@@ -135,12 +135,14 @@ export default function App() {
         {gameStatus === 'idle' && <span style={{ fontSize: 11, color: '#bbb', marginLeft: 12 }}>Select a game and press Start</span>}
       </div>
 
-      {gameStatus === 'finished' && winnerName && (
+      {gameStatus === 'finished' && (
         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9999,
                       background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center', minWidth: 300,
                       border: '2px solid #f59e0b', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 12 }}>游戏结束</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 12 }}>
+            {winnerName ? `胜者：${winnerName}` : '游戏结束'}
+          </h2>
           {ranking.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               {ranking.map((r, i) => (

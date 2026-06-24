@@ -1,92 +1,92 @@
 {
-    "_comment": "炸弹项圈·简化版 — 6人，1局10轮。1欺诈师混在5平民中，每轮猜色，审判指认。",
-    "game_id": "bomb_collar_v2",
-    "name": "炸弹项圈·简化版",
-    "version": "1.0",
-    "description": "6人戴上炸弹项圈。你永远看不到自己的颜色——只能看到另外2个人的。花钱问人、试探说谎、审判指认。猜错爆炸，活到最后积分最高者胜。",
-    "min_players": 6,
-    "max_players": 6,
-    "total_rounds": 10,
-    "mode": "sequential",
-    "language": "zh-CN",
-    "turn_timeout_seconds": 180,
-    "dm_model": "deepseek-v4-pro",
-    "dm_provider": "deepseek",
-    "resources": [
-        {
-            "id": "points",
-            "label": "积分",
-            "unit": "分",
-            "icon": "💎"
-        }
-    ],
-    "players": [
-        {
-            "id": "p1",
-            "name": "ChatGPT",
-            "model": "gpt-5.4",
-            "provider": "relay",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        },
-        {
-            "id": "p2",
-            "name": "Claude",
-            "model": "claude-sonnet-4-6-r",
-            "provider": "relay",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        },
-        {
-            "id": "p3",
-            "name": "豆包",
-            "model": "doubao-seed-2-0-pro-260215",
-            "provider": "doubao",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        },
-        {
-            "id": "p4",
-            "name": "Deepseek",
-            "model": "deepseek-v4-flash",
-            "provider": "deepseek",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        },
-        {
-            "id": "p5",
-            "name": "智谱GLM",
-            "model": "glm-5.2",
-            "provider": "zhipu",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        },
-        {
-            "id": "p6",
-            "name": "Gemini",
-            "model": "gemini-3.1-flash-lite-preview",
-            "provider": "relay",
-            "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 5
-            }
-        }
-    ],
-    "hooks": "hooks.py",
-    "state_machine": null,
-    "schema_override": null,
-    "locked": false,
-    "shuffle_order": true,
-    "two_phase": true,
-    "epilogue": true
+  "_comment": "炸弹项圈·简化版 — 6人，1局10轮。1欺诈师混在5平民中，每轮猜色，审判指认。",
+  "game_id": "bomb_collar_v2",
+  "name": "炸弹项圈·简化版",
+  "version": "1.0",
+  "description": "6人戴上炸弹项圈。你永远看不到自己的颜色——只能看到另外2个人的。花钱问人、试探说谎、审判指认。猜错爆炸，活到最后积分最高者胜。",
+  "min_players": 6,
+  "max_players": 6,
+  "total_rounds": 10,
+  "mode": "sequential",
+  "language": "zh-CN",
+  "turn_timeout_seconds": 180,
+  "dm_model": "deepseek-v4-pro",
+  "dm_provider": "deepseek",
+  "resources": [
+    {
+      "id": "points",
+      "label": "积分",
+      "unit": "分",
+      "icon": "💎"
+    }
+  ],
+  "players": [
+    {
+      "id": "p1",
+      "name": "ChatGPT",
+      "model": "gpt-5.4",
+      "provider": "relay",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Claude",
+      "model": "claude-sonnet-4-6-r",
+      "provider": "relay",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    },
+    {
+      "id": "p3",
+      "name": "豆包",
+      "model": "doubao-seed-2-0-pro-260215",
+      "provider": "doubao",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    },
+    {
+      "id": "p4",
+      "name": "Deepseek",
+      "model": "deepseek-v4-flash",
+      "provider": "deepseek",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    },
+    {
+      "id": "p5",
+      "name": "MiniMax",
+      "model": "minimax-m2.7",
+      "provider": "minimax",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    },
+    {
+      "id": "p6",
+      "name": "Gemini",
+      "model": "gemini-3.1-flash-lite-preview",
+      "provider": "relay",
+      "secret_identity": "你是平民。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 5
+      }
+    }
+  ],
+  "hooks": "hooks.py",
+  "state_machine": null,
+  "schema_override": null,
+  "locked": false,
+  "shuffle_order": true,
+  "two_phase": true,
+  "epilogue": true
 }

@@ -15,12 +15,22 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
-# PyInstaller 打包兼容
+# PyInstaller 打包兼容：EXE 模式下优先使用 exe 同目录下的持久副本
 _GAMES_DIR = Path("games")
+_WRITABLE_DIR: Path | None = None
 if not _GAMES_DIR.exists():
     import sys as _sys
     if getattr(_sys, 'frozen', False):
-        _GAMES_DIR = Path(_sys._MEIPASS) / "games"
+        _frozen_games = Path(_sys._MEIPASS) / "games"
+        _persist_games = Path(_sys.executable).parent / "games"
+        if _frozen_games.exists():
+            _GAMES_DIR = _frozen_games
+            # 首次启动时把 _MEIPASS 的游戏复制到 exe 同目录，后续优先读那里
+            if not _persist_games.exists():
+                import shutil as _shutil
+                _shutil.copytree(_frozen_games, _persist_games)
+            _GAMES_DIR = _persist_games
+        _WRITABLE_DIR = _persist_games
 GAMES_DIR = _GAMES_DIR
 
 

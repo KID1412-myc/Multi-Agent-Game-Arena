@@ -158,6 +158,7 @@ class WerewolfHooks(GameHooks):
     async def _night_phase(self, ctx, alive, a):
         logger.info(f"\n{'='*40}\n🌙 第{self.round_num}轮 夜晚\n{'='*40}")
         ctx.round.public_log.append(f"🌙 第{self.round_num}轮夜晚——狼人与神职行动")
+        self._night_deaths = []  # 初始化今晚死亡列表
 
         # ⏸️ 暂停检查
         await a._wait_if_paused()
@@ -328,8 +329,10 @@ class WerewolfHooks(GameHooks):
             await asyncio.gather(*tasks)
 
         wolf_target = None
+        # ≥2票或只剩1狼时1票即可
+        need_votes = 1 if len(wolves) == 1 else 2
         for pid, cnt in wolf_votes.items():
-            if cnt >= 2:
+            if cnt >= need_votes:
                 wolf_target = pid
                 break
         if wolf_target:
@@ -498,8 +501,8 @@ class WerewolfHooks(GameHooks):
                 wx_ctx = self.memory.build_context_for_player(witch.id)
                 logger.info(f"━━━ 女巫 {witch.name}({witch.id}) 夜晚上下文（应含{'死讯' if wolf_target else '无人被杀'}）━━━\n{wx_ctx[-800:]}")
 
-        # 记录今晚死亡（用于天亮公告和 DM 摘要）
-        self._night_deaths = []
+        # 今晚死亡（毒杀已在女巫环节 append，这里只追加狼杀）
+        # 注意：_night_deaths 已在 run_round 入口初始化为 []，不要在这里清空
 
         # ── 执行狼杀 ──
         if wolf_target:
@@ -847,12 +850,16 @@ class WerewolfHooks(GameHooks):
 
             # 投票结果
             if hasattr(self, '_vote_result') and self._vote_result:
+                passed = self._vote_result.get('passed', False)
                 target = self._vote_result.get('target')
-                if target:
+                if target and passed:
                     target_name = ctx.round.players[target].name if target in ctx.round.players else target
-                    events.append(f"投票结果：{target_name}({target}) 被淘汰")
+                    events.append(f"投票结果：{target_name}({target}) 得票过半数，被淘汰")
+                elif target:
+                    target_name = ctx.round.players[target].name if target in ctx.round.players else target
+                    events.append(f"投票结果：{target_name}({target}) 得票最高但未过半，无人淘汰")
                 else:
-                    events.append("投票结果：无人淘汰")
+                    events.append("投票结果：全部弃权，无人淘汰")
             else:
                 events.append("投票结果：无人淘汰")
 

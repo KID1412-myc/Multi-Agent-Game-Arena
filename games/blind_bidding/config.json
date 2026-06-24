@@ -1,91 +1,91 @@
 {
-    "_comment": "盲投暗标 — 6人6轮。每轮秘密出价0-10，最高唯一者赢得奖池。",
-    "game_id": "blind_bidding",
-    "name": "盲投暗标",
-    "version": "1.0",
-    "description": "6名竞标者每轮秘密出价0-10，出价最高且唯一者赢得奖池。同价则全员作废。6轮后积分最高者胜。",
-    "min_players": 6,
-    "max_players": 6,
-    "total_rounds": 6,
-    "mode": "sequential",
-    "language": "zh-CN",
-    "turn_timeout_seconds": 180,
-    "dm_model": "deepseek-v4-pro",
-    "dm_provider": "deepseek",
-    "resources": [
-        {
-            "id": "points",
-            "label": "积分",
-            "unit": "分",
-            "icon": "💎"
-        }
-    ],
-    "players": [
-        {
-            "id": "p1",
-            "name": "ChatGPT",
-            "model": "gpt-5.5",
-            "provider": "relay",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        },
-        {
-            "id": "p2",
-            "name": "Claude",
-            "model": "claude-sonnet-4-6-r",
-            "provider": "relay",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        },
-        {
-            "id": "p3",
-            "name": "豆包",
-            "model": "doubao-seed-2-0-pro-260215",
-            "provider": "doubao",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        },
-        {
-            "id": "p4",
-            "name": "通义千问",
-            "model": "qwen3.7-plus",
-            "provider": "qwen",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        },
-        {
-            "id": "p5",
-            "name": "智谱GLM",
-            "model": "glm-5-turbo",
-            "provider": "zhipu",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        },
-        {
-            "id": "p6",
-            "name": "Gemini",
-            "model": "gemini-3.1-flash-lite-preview",
-            "provider": "relay",
-            "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
-            "initial_resources": {
-                "points": 0
-            }
-        }
-    ],
-    "hooks": "hooks.py",
-    "state_machine": null,
-    "schema_override": null,
-    "shuffle_order": true,
-    "two_phase": true,
-    "epilogue": true
+  "_comment": "盲投暗标 — 6人6轮。每轮秘密出价0-10，最高唯一者赢得奖池。",
+  "game_id": "blind_bidding",
+  "name": "盲投暗标",
+  "version": "1.0",
+  "description": "6名竞标者每轮秘密出价0-10，出价最高且唯一者赢得奖池。同价则全员作废。6轮后积分最高者胜。",
+  "min_players": 6,
+  "max_players": 6,
+  "total_rounds": 6,
+  "mode": "sequential",
+  "language": "zh-CN",
+  "turn_timeout_seconds": 180,
+  "dm_model": "deepseek-v4-pro",
+  "dm_provider": "deepseek",
+  "resources": [
+    {
+      "id": "points",
+      "label": "积分",
+      "unit": "分",
+      "icon": "💎"
+    }
+  ],
+  "players": [
+    {
+      "id": "p1",
+      "name": "ChatGPT",
+      "model": "gpt-5.5",
+      "provider": "relay",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Claude",
+      "model": "claude-sonnet-4-6-r",
+      "provider": "relay",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    },
+    {
+      "id": "p3",
+      "name": "豆包",
+      "model": "doubao-seed-2-0-pro-260215",
+      "provider": "doubao",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    },
+    {
+      "id": "p4",
+      "name": "通义千问",
+      "model": "qwen3.7-plus",
+      "provider": "qwen",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    },
+    {
+      "id": "p5",
+      "name": "MiniMax",
+      "model": "minimax-m2.7",
+      "provider": "minimax",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    },
+    {
+      "id": "p6",
+      "name": "Gemini",
+      "model": "gemini-3.1-flash-lite-preview",
+      "provider": "relay",
+      "secret_identity": "你是竞标者。根据直觉选择，不要被任何预设限制。",
+      "initial_resources": {
+        "points": 0
+      }
+    }
+  ],
+  "hooks": "hooks.py",
+  "state_machine": null,
+  "schema_override": null,
+  "shuffle_order": true,
+  "two_phase": true,
+  "epilogue": true
 }
