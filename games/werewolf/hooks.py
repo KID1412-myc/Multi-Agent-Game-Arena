@@ -632,8 +632,10 @@ class WerewolfHooks(GameHooks):
                         if attempt > 0:
                             await asyncio.sleep(2.0 * attempt)
                         cot = await agent.act(ctx)
-                        if cot.secret_action.strip():
-                            speech = cot.secret_action.strip()
+                        raw_lw = cot.secret_action.strip()
+                        logger.info(f"  📜 {player.name}({player.id}) 遗言 raw=[{raw_lw[:150]}]")
+                        if raw_lw:
+                            speech = raw_lw
                         break
                     except Exception:
                         if attempt == 2:
