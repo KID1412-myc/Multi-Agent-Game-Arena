@@ -251,13 +251,6 @@ class WerewolfHooks(GameHooks):
                             logger.info(f"✗ {w.name}（{w.id}）狼群发言失败（3次重试耗尽）")
                         continue
 
-        # 🔍 定向调试：随机选一个非狼玩家，打印上下文检查是否泄露狼聊
-        non_wolves = [p for p in alive if self.roles.get(p.id) != "狼人"]
-        if non_wolves:
-            test_p = random.choice(non_wolves)
-            ctx_text = self.memory.build_context_for_player(test_p.id)
-            logger.info(f"━━━ 查狼聊泄露 {test_p.name}({test_p.id}) 夜晚上下文（应不含🐺标记）━━━\n{ctx_text[-800:]}")
-
         # ── 狼人选目标（并发，各自独立决定）──
         wolf_votes = defaultdict(int)  # 使用 defaultdict 保证并发安全
 
@@ -284,7 +277,9 @@ class WerewolfHooks(GameHooks):
                             if attempt == 2:
                                 raise
                             logger.info(f"  🐺 {w.name} 请求失败（attempt {attempt+1}/3），重试...")
-                    pick = self._parse_pick(cot.secret_action, alive)
+                    raw_wolf = cot.secret_action.strip()
+                    logger.info(f"  🐺 {w.name}({w.id}) raw=[{raw_wolf[:120]}]")
+                    pick = self._parse_pick(raw_wolf, alive)
 
                     # 兜底：如果解析失败，随机选择存活玩家
                     if not pick:
@@ -292,8 +287,6 @@ class WerewolfHooks(GameHooks):
                         if candidates:
                             pick = random.choice(candidates)
                             logger.info(f"  ⚠️ {w.name} 解析失败，随机选择: {pick}")
-                            # 通知狼人：你的刀人格式不对，系统随机帮你选了一个
-                            raw_wolf = cot.secret_action.strip()
                             self.memory.add_private(w.id,
                                 f"⚠️ 你的刀人目标未被系统识别（你的回复：{raw_wolf[:80]}）。"
                                 f"系统随机选了你今晚的目标：{ctx.round.players[pick].name}({pick})。"
@@ -379,10 +372,6 @@ class WerewolfHooks(GameHooks):
                     logger.info(f"✗ 预言家 {seer.name}({seer.id}) 查验失败（3次重试耗尽）")
                 agent.action_only = False
                 agent.quick_action_prompt = None
-                # 🔍 预言家上下文——检查查验结果是否收到
-                if seer_result:
-                    sx_ctx = self.memory.build_context_for_player(seer.id)
-                    logger.info(f"━━━ 预言家 {seer.name}({seer.id}) 查验后上下文（应含🔮结果）━━━\n{sx_ctx[-600:]}")
 
         # ── 女巫 ──
         witch = next((p for p in alive if self.roles.get(p.id) == "女巫"), None)
@@ -486,9 +475,6 @@ class WerewolfHooks(GameHooks):
                         f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
                 agent.action_only = False
                 agent.quick_action_prompt = None
-                # 🔍 女巫上下文——检查是否收到死讯/毒药提示
-                wx_ctx = self.memory.build_context_for_player(witch.id)
-                logger.info(f"━━━ 女巫 {witch.name}({witch.id}) 夜晚上下文（应含{'死讯' if wolf_target else '无人被杀'}）━━━\n{wx_ctx[-800:]}")
 
         # 今晚死亡（毒杀已在女巫环节 append，这里只追加狼杀）
         # 注意：_night_deaths 已在 run_round 入口初始化为 []，不要在这里清空
@@ -505,8 +491,8 @@ class WerewolfHooks(GameHooks):
                 self._night_deaths.append(wolf_target)
                 if role == "猎人":
                     logger.info(f"🔫 猎人 {victim.name} 被刀死，可以开枪！")
-                    ctx.round.public_log.append(f"🔫 {victim.name} 是猎人，被刀死，开枪带走一人！")
                     await self._hunter_shoot(ctx, alive, a, wolf_target)
+                    # _hunter_shoot 内部负责 public_log + add_public（只有真正开枪才公布）
                 a.eliminate(ctx, wolf_target)
 
         # ── 天亮公告（不暴露身份，只报死亡/平安夜）──
@@ -581,7 +567,7 @@ class WerewolfHooks(GameHooks):
                     logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 选择压枪，不开枪")
                     await a.night_action("hunter_shoot", hunter_id, hunter.name,
                                          "选择压枪，不开枪", round_num=self.round_num)
-                    ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 选择压枪，不开枪")
+                    # 压枪不公布猎人身份——其他玩家不知道他是猎人
                 else:
                     target = self._parse_pick(raw_hunter, alive)
                     if target and target != hunter_id:
@@ -591,24 +577,25 @@ class WerewolfHooks(GameHooks):
                             await a.night_action("hunter_shoot", hunter_id, hunter.name,
                                                  f"开枪带走 {victim.name}({target})",
                                                  target_id=target, round_num=self.round_num)
-                            ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪带走了 {victim.name}！")
+                            # 开枪了才公布——前端公告板 + 玩家记忆
+                            msg = f"🔫 {hunter.name} 是猎人，开枪带走了 {victim.name}！"
+                            ctx.round.public_log.append(msg)
+                            self.memory.add_public(hunter_id, msg)
                             if death_log is not None:
                                 death_log.append(target)
                             if hasattr(self, '_night_deaths'):
                                 self._night_deaths.append(target)
                             a.eliminate(ctx, target)
                     else:
-                        # 既不是压枪，也解析不出目标——格式错误，默认压枪
+                        # 既不是压枪，也解析不出目标——格式错误，默认压枪，不公布身份
                         logger.info(f"  ⚠️ 猎人 {hunter.name}({hunter_id}) 格式错误，默认压枪: raw=[{raw_hunter[:120]}]")
                         await a.night_action("hunter_shoot", hunter_id, hunter.name,
                                              "格式错误，默认压枪", round_num=self.round_num)
-                        ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪失败（格式错误），默认压枪")
                         self.memory.add_private(hunter_id,
                             f"⚠️ 你的开枪目标未能被系统识别（回复：{raw_hunter[:80]}）。已默认压枪。"
                             f"正确格式：枪-pX（如 枪-p2）或 压枪。")
             except Exception:
                 logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 开枪失败（3次重试耗尽），默认压枪")
-                ctx.round.public_log.append(f"🔫 猎人 {hunter.name} 开枪失败，默认压枪")
                 self.memory.add_private(hunter_id,
                     f"⚠️ 你的开枪操作因网络错误未能执行，已默认压枪。")
             agent.action_only = False

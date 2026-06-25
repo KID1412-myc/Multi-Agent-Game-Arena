@@ -66,7 +66,7 @@ async def run_game(game_id: str, background_tasks: BackgroundTasks):
     _current_arena = arena
 
     async def run_in_background():
-        global _last_result
+        global _last_result, _current_arena
         try:
             _last_result = await arena.run()
         except Exception as e:
@@ -77,6 +77,8 @@ async def run_game(game_id: str, background_tasks: BackgroundTasks):
                 payload={"message": str(e)},
             ))
             raise
+        finally:
+            _current_arena = None  # 游戏结束后释放，允许再次启动
 
     _current_task = asyncio.create_task(run_in_background())
 
