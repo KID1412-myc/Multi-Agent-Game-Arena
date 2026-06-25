@@ -755,26 +755,33 @@ class WerewolfHooks(GameHooks):
                 "side": "狼人" if role == "狼人" else "好人",
             })
 
-        if not wolves_alive:
-            logger.info("🏆 所有狼人死亡——神职+村民获胜！")
+        if not wolves_alive or len(wolves_alive) >= len(alive) / 2:
+            winner_side = "好人" if not wolves_alive else "狼人"
+            desc = "所有狼人被消灭" if not wolves_alive else f"狼人数量（{len(wolves_alive)}）≥存活人数一半（{len(alive)}）"
+            winner_ids = villagers_alive if not wolves_alive else wolves_alive
+
+            logger.info(f"🏆 {winner_side}阵营获胜！")
             if self.arena:
                 self.arena._game_over_extra = {
                     "game_type": "werewolf",
-                    "winner_side": "好人",
-                    "desc": "所有狼人被消灭",
+                    "winner_side": winner_side,
+                    "desc": desc,
                     "players": players_info,
                 }
-            return ",".join(p.id for p in villagers_alive)
-        if len(wolves_alive) >= len(alive) / 2:
-            logger.info("🏆 狼人数量过半——狼人获胜！")
-            if self.arena:
-                self.arena._game_over_extra = {
-                    "game_type": "werewolf",
-                    "winner_side": "狼人",
-                    "desc": f"狼人数量（{len(wolves_alive)}）≥存活人数一半（{len(alive)}）",
-                    "players": players_info,
-                }
-            return ",".join(p.id for p in wolves_alive)
+
+            # 游戏结束，向所有玩家揭露全场身份
+            role_reveal = "## 🏆 游戏结束——全场身份揭露\n\n"
+            role_reveal += f"胜者：{winner_side}阵营\n\n"
+            for p in ctx.round.players.values():
+                role = self.roles.get(p.id, "?")
+                icon = role_icons.get(role, "")
+                alive_tag = "存活" if p.is_alive else "已淘汰"
+                role_reveal += f"- {icon} {p.name}（{p.id}）：{role}（{alive_tag}）\n"
+            if self.memory:
+                for p in ctx.round.players.values():
+                    self.memory.add_private(p.id, role_reveal)
+
+            return ",".join(p.id for p in winner_ids)
         return None
 
     async def _check_win(self, alive) -> bool:
