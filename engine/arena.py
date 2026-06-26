@@ -554,6 +554,8 @@ class Arena:
                 for agent in self.players.values():
                     agent.speech_only = True
                 for pid in list(self.players.keys()):
+                    if self._stop_event.is_set():
+                        break
                     p = ctx.round.players.get(pid)
                     if p:
                         tag = "（已淘汰）" if not p.is_alive else ""
@@ -563,8 +565,9 @@ class Arena:
                         )
                         p.last_cot = None
                         p.is_alive = True  # 临时复活以参与发言
-                all_players = [s for s in ctx.round.players.values()]
-                await self._collect_actions(ctx, all_players)
+                if not self._stop_event.is_set():
+                    all_players = [s for s in ctx.round.players.values()]
+                    await self._collect_actions(ctx, all_players)
                 for agent in self.players.values():
                     agent.speech_only = False
 

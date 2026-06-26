@@ -32,7 +32,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v2.0</span></span>
+      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v2.1.5</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#666' }}>

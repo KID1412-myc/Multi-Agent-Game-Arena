@@ -34,12 +34,14 @@ async def _event_callback(event: WSEvent) -> None:
 
 
 @router.post("/run")
-async def run_game(game_id: str, background_tasks: BackgroundTasks):
+async def run_game(game_id: str, background_tasks: BackgroundTasks, body: dict = None):
     """
-    启动一场新游戏（后台运行）。
+    启动一场新游戏（后台运行）。可选 body.assignments 传入手动分配。
 
     查询参数:
-        game_id: 游戏目录名，如 "business_espionage"
+        game_id: 游戏目录名
+    Body（可选）:
+        {"assignments": {...}} 手动分配
     """
     global _current_arena, _current_task, _last_result
 
@@ -63,6 +65,11 @@ async def run_game(game_id: str, background_tasks: BackgroundTasks):
         game_id=game_id,
         event_callback=_event_callback,
     )
+    # 手动分配：从前端传入的角色/目标分配
+    if body and isinstance(body, dict):
+        assignments = body.get("assignments")
+        if assignments:
+            arena._assignments = assignments
     _current_arena = arena
 
     async def run_in_background():

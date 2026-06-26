@@ -143,10 +143,22 @@ class LootShareHooks(GameHooks):
             self.identities[pid] = ids_copy[i]
 
         # 分配秘密目标（先存，盯上再后处理——需要找到称霸者）
-        goals_copy = list(GOALS)
-        random.shuffle(goals_copy)
-        for i, pid in enumerate(pids):
-            self.goals[pid] = goals_copy[i]
+        manual_assign = (self.arena and getattr(self.arena, '_assignments', None))
+        goal_map = {name: (name, desc) for name, desc in GOALS}
+        if manual_assign:
+            for pid in pids:
+                goal_name = manual_assign.get(pid, "")
+                if goal_name in goal_map:
+                    self.goals[pid] = goal_map[goal_name]
+                else:
+                    logger.warning(f"手动分配目标无效: {pid}={goal_name}，随机分配")
+                    self.goals[pid] = random.choice(GOALS)
+            logger.info(f"📋 手动分配目标: { {p: self.goals[p][0] for p in pids} }")
+        else:
+            goals_copy = list(GOALS)
+            random.shuffle(goals_copy)
+            for i, pid in enumerate(pids):
+                self.goals[pid] = goals_copy[i]
 
         # 盯上目标 = 称霸玩家（不告知称霸者的目标）
         dominator_pid = next((pid for pid in pids if self.goals[pid][0] == "称霸"), None)

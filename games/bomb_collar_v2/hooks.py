@@ -183,7 +183,13 @@ class BombCollarHooks(GameHooks):
 
     async def on_game_start(self, ctx):
         pids = [p.id for p in ctx.round.players.values()]
-        self.fraudster_id = random.choice(pids)
+        # 手动分配欺诈师
+        manual_assign = (self.arena and getattr(self.arena, '_assignments', None))
+        if manual_assign and "fraudster" in manual_assign:
+            self.fraudster_id = manual_assign["fraudster"]
+            logger.info(f"📋 手动分配欺诈师: {self.fraudster_id}")
+        else:
+            self.fraudster_id = random.choice(pids)
         self.colors = {}
         self.peace_streak = 0
         self.trial_used = False

@@ -241,7 +241,6 @@ class WerewolfHooks(GameHooks):
                         if speech:
                             for w2 in wolves:
                                 self.memory.add_private(w2.id, f"🐺 {w.name}({w.id})在狼群中说: {speech}")
-                            logger.info(f"🐺 [狼聊] {w.name}({w.id}): {speech[:300]}")
                             await a.night_action("wolf_chat", w.id, w.name, speech,
                                                  round_num=self.round_num)
                         logger.info(f"✓ {w.name}（{w.id}）狼群发言完成")
@@ -616,23 +615,21 @@ class WerewolfHooks(GameHooks):
     # ============================================================
 
     async def _last_words(self, ctx, player):
-        """遗言：被投票出局时的最后陈述"""
+        """遗言：被投票出局时的最后陈述（走 speech_only 避免 _act_quick 截断）"""
         self.memory.add_private(player.id,
             f"📜 你（{player.id}）已被投票淘汰。请留下遗言——可以指控、揭露、虚张声势、或沉默。用ID指代玩家，如'我怀疑p3是狼'、'p5是预言家'。")
         agent = self.arena.players.get(player.id)
         if agent:
-            agent.quick_action_prompt = f"[你是 {player.id}] 你被投票淘汰了。请留下遗言（指控、揭露、沉默均可）。用ID指代玩家。回复一段话"
-            agent.action_only = True
+            agent.speech_only = True
 
             speech = None
             try:
-                # 遗言加重试机制，防止 API 失败丢失
                 for attempt in range(3):
                     try:
                         if attempt > 0:
                             await asyncio.sleep(2.0 * attempt)
                         cot = await agent.act(ctx)
-                        raw_lw = cot.secret_action.strip()
+                        raw_lw = cot.public_speech.strip()
                         logger.info(f"  📜 {player.name}({player.id}) 遗言 raw=[{raw_lw[:150]}]")
                         if raw_lw:
                             speech = raw_lw
@@ -644,7 +641,6 @@ class WerewolfHooks(GameHooks):
             except Exception:
                 logger.info(f"✗ {player.name}({player.id}) 遗言失败（3次重试耗尽）")
 
-            # 遗言兜底：如果失败，生成默认遗言
             if not speech:
                 role = self.roles.get(player.id, "平民")
                 if role == "预言家":
@@ -660,7 +656,6 @@ class WerewolfHooks(GameHooks):
             if speech:
                 ctx.round.public_log.append(f"📜 {player.name}({player.id}) 的遗言：{speech}")
                 self.memory.add_public(player.id, f"📜 {player.name}({player.id}) 的遗言：{speech}")
-                # 推送到前端发言区，让遗言像正常发言一样显示在玩家卡片上
                 await self.arena._emit(WSEventType.PLAYER_SPEECH, {
                     "player_id": player.id,
                     "player_name": player.name,
@@ -669,8 +664,7 @@ class WerewolfHooks(GameHooks):
                 })
                 logger.info(f"📜 {player.name}({player.id}) 遗言: {speech[:200]}")
 
-            agent.action_only = False
-            agent.quick_action_prompt = None
+            agent.speech_only = False
 
     # ============================================================
     # 旧钩子
@@ -678,11 +672,19 @@ class WerewolfHooks(GameHooks):
 
     async def on_game_start(self, ctx):
         pids = [p.id for p in ctx.round.players.values()]
-        random.shuffle(pids)
-        roles_copy = list(ROLES)
-        random.shuffle(roles_copy)
-        for i, pid in enumerate(pids):
-            self.roles[pid] = roles_copy[i]
+        # 手动分配
+        manual_assign = (self.arena and getattr(self.arena, '_assignments', None))
+        if manual_assign:
+            for pid in pids:
+                if pid in manual_assign:
+                    self.roles[pid] = manual_assign[pid]
+            logger.info(f"📋 手动分配角色: { {p: r for p, r in self.roles.items()} }")
+        else:
+            random.shuffle(pids)
+            roles_copy = list(ROLES)
+            random.shuffle(roles_copy)
+            for i, pid in enumerate(pids):
+                self.roles[pid] = roles_copy[i]
         self.witch_antidote = True
         self.witch_poison = True
         self.round_num = 0

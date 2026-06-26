@@ -12,6 +12,11 @@ interface ArenaState {
   connected: boolean;
   gameStatus: 'idle' | 'loading' | 'running' | 'paused' | 'round_paused' | 'finished' | 'error';
   gameOverPayload: { winner_id?: string; winner_name?: string; ranking?: { name: string; score: number }[]; extra?: Record<string, any> } | null;
+  // 分配模式
+  assignMode: 'random' | 'manual';
+  assignments: Record<string, string>;
+  setAssignMode: (m: 'random' | 'manual') => void;
+  setAssignments: (a: Record<string, string>) => void;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -45,6 +50,10 @@ export const useArenaStore = create<ArenaState>((set) => ({
   connected: false,
   gameStatus: 'idle',
   gameOverPayload: null,
+  assignMode: 'random',
+  assignments: {},
+  setAssignMode: (m) => set({ assignMode: m }),
+  setAssignments: (a) => set({ assignments: a }),
   speechLog: [],
   selectedPlayerId: null,
   showCoT: false,
@@ -102,6 +111,8 @@ export const useArenaStore = create<ArenaState>((set) => ({
       ctx: null,
       gameStatus: 'idle',
       gameOverPayload: null,
+      assignMode: 'random',
+      assignments: {},
       speechLog: [],
       selectedPlayerId: null,
       showCoT: false,

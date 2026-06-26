@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, Save, X, Cpu, Gavel, Wifi } from 'lucide-react';
+import { Settings, Save, X, Cpu, Gavel, Wifi, Shuffle } from 'lucide-react';
+import { useArenaStore } from '../store/arenaStore';
 
 // ── Styles ──
 const B: React.CSSProperties = {
@@ -38,6 +39,59 @@ export function ModelSettings({ gameId, disabled }: Props) {
   // Per-slot test state: key is "dm" or "p0".."p5"
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const [testResults, setTestResults] = useState<Record<string, string>>({});
+
+  // 分配模式
+  const assignMode = useArenaStore((s) => s.assignMode);
+  const assignments = useArenaStore((s) => s.assignments);
+  const setAssignMode = useArenaStore((s) => s.setAssignMode);
+  const setAssignments = useArenaStore((s) => s.setAssignments);
+
+  // 根据游戏类型计算可用角色/目标
+  const assignOptions = useMemo(() => {
+    if (!gameId) return null;
+    if (gameId === 'werewolf') {
+      return {
+        title: '角色分配',
+        options: [
+          { label: '🐺 狼人', value: '狼人', max: 3 },
+          { label: '🔮 预言家', value: '预言家', max: 1 },
+          { label: '🧪 女巫', value: '女巫', max: 1 },
+          { label: '🔫 猎人', value: '猎人', max: 1 },
+          { label: '👤 平民', value: '平民', max: 3 },
+        ],
+        type: 'role' as const,
+      };
+    }
+    if (gameId === 'loot_share') {
+      return {
+        title: '目标分配',
+        options: [
+          { label: '🏆 称霸', value: '称霸', max: 1 },
+          { label: '📉 垫底', value: '垫底', max: 1 },
+          { label: '📊 中游', value: '中游', max: 1 },
+          { label: '💥 毁灭者', value: '毁灭者', max: 1 },
+          { label: '🕊️ 和平奖', value: '和平奖', max: 1 },
+          { label: '🎯 盯上', value: '盯上', max: 1 },
+        ],
+        type: 'goal' as const,
+      };
+    }
+    if (gameId === 'bomb_collar_v2') {
+      return {
+        title: '欺诈师分配',
+        options: [],
+        type: 'fraudster' as const,
+      };
+    }
+    return null;
+  }, [gameId]);
+
+  // 用量计数
+  const optionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(assignments).forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+    return counts;
+  }, [assignments]);
 
   useEffect(() => {
     fetch('/api/models/providers').then(r => r.json()).then(d => setProviders(d.providers || [])).catch(() => {});
@@ -80,7 +134,7 @@ export function ModelSettings({ gameId, disabled }: Props) {
     return (
       <button onClick={() => setOpen(true)} disabled={disabled || !gameId}
         style={{ ...BTN('#fff', '#333', '#ddd'), display: 'flex', alignItems: 'center', gap: 4, opacity: (disabled || !gameId) ? 0.4 : 1 }}>
-        <Settings size={14} /> 配置模型
+        <Settings size={14} /> 设置
       </button>
     );
   }
@@ -90,7 +144,7 @@ export function ModelSettings({ gameId, disabled }: Props) {
       <div style={P} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>模型配置</h3>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>设置</h3>
           <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
             <X size={20} />
           </button>
@@ -150,6 +204,67 @@ export function ModelSettings({ gameId, disabled }: Props) {
                 })}
               </div>
             </div>
+
+            {/* ── 分配模式 ── */}
+            {assignOptions && (
+              <div style={{ marginBottom: 18, padding: '12px 0', borderTop: '1px solid #eee' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                  <Shuffle size={14} color="#8b5cf6" />
+                  <span style={L}>{assignOptions.title}</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                    <button onClick={() => { setAssignMode('random'); setAssignments({}); }}
+                      style={{ ...BTN(assignMode === 'random' ? '#8b5cf6' : '#fff', assignMode === 'random' ? '#fff' : '#666', assignMode === 'random' ? '#8b5cf6' : '#ddd'), fontSize: 11 }}>
+                      随机
+                    </button>
+                    <button onClick={() => setAssignMode('manual')}
+                      style={{ ...BTN(assignMode === 'manual' ? '#8b5cf6' : '#fff', assignMode === 'manual' ? '#fff' : '#666', assignMode === 'manual' ? '#8b5cf6' : '#ddd'), fontSize: 11 }}>
+                      手动
+                    </button>
+                  </div>
+                </div>
+                {assignMode === 'manual' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {(cfg?.players || []).map((p: any) => (
+                      <div key={p.id} style={{ ...R, padding: '4px 8px', borderRadius: 6, background: '#fafafa' }}>
+                        <span style={{ fontSize: 12, width: 90, color: '#555' }}>{p.name} ({p.id})</span>
+                        {assignOptions.type === 'fraudster' ? (
+                          <label style={{ fontSize: 12, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={assignments[p.id] === '欺诈师'}
+                              onChange={e => {
+                                const a = { ...assignments };
+                                if (e.target.checked) {
+                                  Object.keys(a).forEach(k => { if (a[k] === '欺诈师') delete a[k]; });
+                                  a[p.id] = '欺诈师';
+                                } else {
+                                  delete a[p.id];
+                                }
+                                setAssignments(a);
+                              }} />
+                            {' '}🎭 欺诈师
+                          </label>
+                        ) : (
+                          <select value={assignments[p.id] || ''}
+                            onChange={e => {
+                              const a = { ...assignments };
+                              if (e.target.value) a[p.id] = e.target.value; else delete a[p.id];
+                              setAssignments(a);
+                            }}
+                            style={{ ...S, flex: 1, fontSize: 12 }}>
+                            <option value="">— 不指定 —</option>
+                            {assignOptions.options.map(opt => (
+                              <option key={opt.value} value={opt.value}
+                                disabled={(optionCounts[opt.value] || 0) >= opt.max && assignments[p.id] !== opt.value}>
+                                {opt.label} ({(optionCounts[opt.value] || 0)}/{opt.max})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid #eee' }}>

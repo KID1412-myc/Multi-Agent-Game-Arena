@@ -49,11 +49,26 @@ export default function App() {
     }
   }, []);
 
+  const assignMode = useArenaStore((s) => s.assignMode);
+  const assignments = useArenaStore((s) => s.assignments);
+
   const handleStart = useCallback(async () => {
     if (!selectedGameId) return;
     setGameStatus('loading');
-    await api(`/api/arena/run?game_id=${encodeURIComponent(selectedGameId)}`);
-  }, [selectedGameId, api, setGameStatus]);
+    const body = assignMode === 'manual' && Object.keys(assignments).length > 0
+      ? JSON.stringify({ assignments })
+      : undefined;
+    const res = await fetch(`/api/arena/run?game_id=${encodeURIComponent(selectedGameId)}`, {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body,
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`请求失败: ${err.detail || JSON.stringify(err)}`);
+      setGameStatus('idle');
+    }
+  }, [selectedGameId, setGameStatus, assignMode, assignments]);
 
   const reset = useArenaStore((s) => s.reset);
 
