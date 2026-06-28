@@ -35,7 +35,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '-0.01em' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>v2.2.1</span></span>
+      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '-0.01em' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>v2.3.1</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>

@@ -17,14 +17,42 @@ export function ReplayPlayer() {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
+  const [filterGame, setFilterGame] = useState('');
+  const [sortBy, setSortBy] = useState('time-desc');
+  const [allReplays, setAllReplays] = useState<ReplayInfo[]>([]);
+  const [gameNames, setGameNames] = useState<Record<string, string>>({});
   const timerRef = useRef<number | null>(null);
   const store = useArenaStore;
 
   const loadList = useCallback(async () => {
-    const res = await fetch('/api/replays');
-    const data = await res.json();
-    setReplays(data.replays || []);
+    const [replayRes, gameRes] = await Promise.all([
+      fetch('/api/replays'),
+      fetch('/api/games'),
+    ]);
+    const replayData = await replayRes.json();
+    const gameData = await gameRes.json();
+    const names: Record<string, string> = {};
+    (gameData.games || []).forEach((g: any) => { names[g.id] = g.name; });
+    setGameNames(names);
+    setAllReplays(replayData.replays || []);
   }, []);
+
+  const sortReplays = (list: ReplayInfo[]) => {
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'time-asc': sorted.sort((a, b) => a.timestamp.localeCompare(b.timestamp)); break;
+      case 'name': sorted.sort((a, b) => (gameNames[a.game_id] || a.game_id).localeCompare(gameNames[b.game_id] || b.game_id)); break;
+      case 'size': sorted.sort((a, b) => b.size - a.size); break;
+      default: break; // time-desc: default from backend (already reverse sorted)
+    }
+    return sorted;
+  };
+
+  useEffect(() => {
+    const filtered = filterGame ? allReplays.filter(r => r.game_id === filterGame) : allReplays;
+    setReplays(sortReplays(filtered));
+    setSelectedIds(new Set());
+  }, [filterGame, allReplays, sortBy]);
 
   const loadReplay = async (id: string) => {
     setLoading(true);
@@ -207,8 +235,23 @@ export function ReplayPlayer() {
 
       {events.length === 0 ? (
         <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-            <h3 style={{ fontSize: 14, color: 'var(--text-primary)', flex: 1 }}>选择回放文件</h3>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 14, color: 'var(--text-primary)' }}>选择回放文件</h3>
+            <select value={filterGame} onChange={e => { setFilterGame(e.target.value); }}
+              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+              <option value="">全部游戏</option>
+              {[...new Set(allReplays.map(r => r.game_id))].map(gid => (
+                <option key={gid} value={gid}>{gameNames[gid] || gid}</option>
+              ))}
+            </select>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+              <option value="time-desc">最新优先</option>
+              <option value="time-asc">最早优先</option>
+              <option value="name">按游戏名</option>
+              <option value="size">按文件大小</option>
+            </select>
+            <div style={{ flex: 1 }} />
             {replays.length > 0 && (
               <>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer', marginRight: 12 }}>

@@ -30,7 +30,7 @@ from server.api import arena, events, games, models
 
 app = FastAPI(
     title="MAGA Arena API",
-    version="2.2.0",
+    version="2.3.1",
 )
 
 app.add_middleware(
