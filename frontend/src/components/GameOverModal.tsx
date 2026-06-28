@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+
 interface PlayerInfo {
   id: string; name: string; role: string; icon?: string;
   is_alive?: boolean; side?: string; points?: number;
@@ -18,19 +20,28 @@ export function GameOverModal({ winnerName, ranking, extra, onClose }: Props) {
   const players: PlayerInfo[] = extra?.players || [];
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: 'var(--glass-bg)', borderRadius: 'var(--radius-xl)', padding: 28,
-        minWidth: 340, maxWidth: 480, maxHeight: '85vh', overflow: 'auto',
-        border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)',
-        backdropFilter: 'blur(var(--glass-blur))', WebkitBackdropFilter: 'blur(var(--glass-blur))',
-        textAlign: 'center',
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 90, delay: 0.08 }}
+        style={{
+          background: 'var(--bg-root)', borderRadius: 'var(--radius-xl)', padding: 28,
+          minWidth: 340, maxWidth: 480, maxHeight: '85vh', overflow: 'auto',
+          border: '2px solid var(--color-primary)', boxShadow: 'var(--shadow-L4)',
+          textAlign: 'center',
+        }}>
         <div style={{ fontSize: 36, marginBottom: 4 }}>🏆</div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
           {renderTitle(gameType, extra, winnerName)}
@@ -46,8 +57,8 @@ export function GameOverModal({ winnerName, ranking, extra, onClose }: Props) {
                    borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
           关闭
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -172,16 +183,20 @@ function renderDefault(ranking: { name: string; score: number }[], winnerName: s
   return (
     <div style={{ marginBottom: 12 }}>
       {ranking.map((r, i) => (
-        <div key={i} style={{
-          display: 'flex', justifyContent: 'space-between', padding: '4px 12px',
-          fontSize: 13, fontWeight: r.name === ranking[0].name ? 700 : 400,
-          color: i === 0 ? 'var(--color-accent)' : 'var(--text-primary)',
-          background: i === 0 ? '#FFFBEB' : 'transparent',
-          borderRadius: 'var(--radius-sm)', marginBottom: 2,
-        }}>
+        <motion.div key={i}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.25, delay: i * 0.06, ease: [0, 0, 0.2, 1] }}
+          style={{
+            display: 'flex', justifyContent: 'space-between', padding: '4px 12px',
+            fontSize: 13, fontWeight: r.name === ranking[0].name ? 700 : 400,
+            color: i === 0 ? 'var(--color-accent)' : 'var(--text-primary)',
+            background: i === 0 ? '#FFFBEB' : 'transparent',
+            borderRadius: 'var(--radius-sm)', marginBottom: 2,
+          }}>
           <span>{medalIcons[i] || i + 1} {r.name}</span>
           <span style={{ fontFamily: 'var(--font-mono)' }}>{r.score} 分</span>
-        </div>
+        </motion.div>
       ))}
     </div>
   );

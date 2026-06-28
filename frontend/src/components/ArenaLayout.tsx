@@ -9,9 +9,9 @@ export function ArenaLayout() {
   if (!ctx) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#999' }}>
+        <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>arena</div>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#333', marginBottom: 4 }}>MAGA</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>MAGA</h2>
           <p style={{ fontSize: 13 }}>Select a game and press Start</p>
         </div>
       </div>
@@ -20,12 +20,11 @@ export function ArenaLayout() {
 
   const players = Object.values(ctx.round.players);
   const resources = ctx.game_config.resources;
+  const activeId = players.find(p => p.is_current_speaker)?.id || null;
 
-  // 三明治布局：顶 1 行 + 中间 DM/看板 + 底可滚动
   const topPlayers = players.slice(0, 3);
   const bottomPlayers = players.slice(3);
 
-  // 底部按每行 3 人分组
   const bottomRows: typeof players[] = [];
   for (let i = 0; i < bottomPlayers.length; i += 3) {
     bottomRows.push(bottomPlayers.slice(i, i + 3));
@@ -36,9 +35,9 @@ export function ArenaLayout() {
   return (
     <div style={{
       flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6,
-      background: '#f5f5f5', minHeight: 0, overflowY: 'auto',
+      background: 'var(--bg-root)', minHeight: 0, overflowY: 'auto',
     }}>
-      {/* 顶部：固定 1 行玩家 */}
+      {/* 顶部：固定 1 行玩家 — Bento Grid：发言者占 2 列 */}
       {topPlayers.length > 0 && (
         <div style={{
           display: 'grid',
@@ -49,12 +48,17 @@ export function ArenaLayout() {
           minWidth: 0,
         }}>
           {topPlayers.map((p, i) => (
-            <PlayerCard key={p.id} player={p} resources={resources} index={i} />
+            <div key={p.id} style={{
+              gridColumn: p.id === activeId ? 'span 2' : undefined,
+              height: '100%', overflow: 'hidden',
+            }}>
+              <PlayerCard player={p} resources={resources} index={i} />
+            </div>
           ))}
         </div>
       )}
 
-      {/* 中间：DM + PublicBoard（拿最大空间） */}
+      {/* 中间：DM + PublicBoard */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
@@ -87,7 +91,12 @@ export function ArenaLayout() {
               minWidth: 0,
             }}>
               {row.map((p, colIdx) => (
-                <PlayerCard key={p.id} player={p} resources={resources} index={3 + rowIdx * 3 + colIdx} />
+                <div key={p.id} style={{
+                  gridColumn: p.id === activeId ? 'span 2' : undefined,
+                  height: '100%', overflow: 'hidden',
+                }}>
+                  <PlayerCard player={p} resources={resources} index={3 + rowIdx * 3 + colIdx} />
+                </div>
               ))}
             </div>
           ))}

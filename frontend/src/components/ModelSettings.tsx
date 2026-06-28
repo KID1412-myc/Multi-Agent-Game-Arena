@@ -133,7 +133,7 @@ export function ModelSettings({ gameId, disabled }: Props) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} disabled={disabled || !gameId}
-        style={{ ...BTN('#fff', '#333', '#ddd'), display: 'flex', alignItems: 'center', gap: 4, opacity: (disabled || !gameId) ? 0.4 : 1 }}>
+        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: (disabled || !gameId) ? 0.4 : 1 }}>
         <Settings size={14} /> 设置
       </button>
     );

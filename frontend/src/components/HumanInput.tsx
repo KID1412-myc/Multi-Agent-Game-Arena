@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useArenaStore } from '../store/arenaStore';
 
 interface Props {
@@ -15,11 +16,13 @@ export function HumanInput({ ws }: Props) {
   const [action, setAction] = useState('');
   const [waiting, setWaiting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [closing, setClosing] = useState(false);
 
-  // 游戏停止或异常时自动关闭输入框（结算发言阶段 gameStatus='finished' 不关）
+  // 游戏停止或异常时自动关闭输入框
   useEffect(() => {
     if (waiting && (gameStatus === 'idle' || gameStatus === 'error')) {
       setWaiting(false);
+      setClosing(false);
       setSpeech('');
       setAction('');
       useArenaStore.getState().setHumanWaiting(false);
@@ -34,6 +37,7 @@ export function HumanInput({ ws }: Props) {
       setSpeech('');
       setAction('');
       setWaiting(true);
+      setClosing(false);
       const s = useArenaStore.getState();
       s.setHumanWaiting(true);
       s.setSelectedPlayer(null);
@@ -56,31 +60,44 @@ export function HumanInput({ ws }: Props) {
       speech: speech,
       action: action,
     }));
-    // 延迟关闭，给服务器处理时间，防止消息丢失
+    // 先播放收缩动画，再关闭
+    setClosing(true);
     setTimeout(() => {
       setWaiting(false);
+      setClosing(false);
       setSubmitting(false);
       setSpeech('');
       setAction('');
       useArenaStore.getState().setHumanWaiting(false);
-    }, 300);
+    }, 350);
   };
 
   const player = ctx?.round.players[playerId];
   const resources = player ? Object.entries(player.resources).map(([k, v]) => `${k}: ${v}`).join(', ') : '';
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: 'var(--glass-bg)', borderRadius: 'var(--radius-lg)', padding: 24,
-        minWidth: 380, maxWidth: 480,
-        border: '2px solid var(--status-human)', boxShadow: 'var(--glass-shadow)',
-        backdropFilter: 'blur(var(--glass-blur))', WebkitBackdropFilter: 'blur(var(--glass-blur))',
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: closing ? 0 : 1 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 32 }}
+        animate={closing
+          ? { opacity: 0, scale: 1.02 }
+          : { opacity: 1, scale: 1, y: 0 }}
+        transition={closing
+          ? { duration: 0.15, ease: [0.4, 0, 1, 1] }
+          : { type: 'spring', damping: 20, stiffness: 90, duration: 0.35 }}
+        style={{
+          background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', padding: 24,
+          minWidth: 380, maxWidth: 480,
+          border: '2px solid var(--status-human)', boxShadow: 'var(--shadow-L4)',
+        }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
           轮到你了 —— {playerName} ({playerId})
         </div>
@@ -124,7 +141,7 @@ export function HumanInput({ ws }: Props) {
           }}>
           {submitting ? '提交中...' : '提交'}
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

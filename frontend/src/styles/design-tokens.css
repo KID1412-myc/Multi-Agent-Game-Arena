@@ -1,45 +1,40 @@
 /* ================================================================
-   MAGA Arena — Design Tokens v2.2.0
-   风格：Light Glassmorphism + Swiss Minimalism
-   配色：B2B Service + SaaS General（浅色基底，无暗色）
+   MAGA Arena — Design Tokens v2.2.1
+   风格：The Club Room（俱乐部观战室）
+   色系：奶油纸底 + 牌桌绿 + 黄铜金 + 墨水石板
+   动效：机械表微节奏（看 UI.md §六）
    基于 UI.md 设计系统 + ui-ux-pro-max 推理引擎
    ================================================================ */
 
-/* ── 浅色模式（唯一模式） ──────────────────────────────────── */
+/* ── 浅色模式（主模式） ──────────────────────────────────── */
 :root {
   /* 背景层级 */
-  --bg-root:       #F8FAFC;
+  --bg-root:       #FFFBEB;
   --bg-surface:    #FFFFFF;
-  --bg-elevated:   #FFFFFF;
-  --bg-hover:      #F1F5F9;
-  --bg-active:     #EFF6FF;
-  --bg-overlay:    rgba(15, 23, 42, 0.35);
-  --bg-muted:      #F1F5F9;
-
-  /* 玻璃态（Glassmorphism 微质感） */
-  --glass-bg:      rgba(255, 255, 255, 0.85);
-  --glass-border:  rgba(0, 0, 0, 0.06);
-  --glass-blur:    12px;
-  --glass-shadow:  0 8px 32px rgba(0, 0, 0, 0.08);
+  --bg-elevated:   #FFFBEB;
+  --bg-hover:      #FEF3C7;
+  --bg-active:     #F0FDFA;
+  --bg-overlay:    rgba(30, 41, 59, 0.35);
+  --bg-muted:      #F5F0E6;
 
   /* 文字层级 */
-  --text-primary:    #0F172A;
-  --text-secondary:  #475569;
+  --text-primary:    #1E293B;
+  --text-secondary:  #64748B;
   --text-tertiary:   #94A3B8;
   --text-on-brand:   #FFFFFF;
-  --text-link:       #2563EB;
+  --text-link:       #0D9488;
 
-  /* 品牌色（SaaS General + B2B Service 融合） */
-  --color-primary:        #2563EB;
-  --color-primary-hover:  #1D4ED8;
-  --color-primary-soft:   #DBEAFE;
-  --color-secondary:      #6366F1;
-  --color-secondary-soft: #E0E7FF;
-  --color-accent:         #EA580C;
-  --color-accent-soft:    #FFF7ED;
+  /* 品牌色 —— 牌桌绿 + 皮棕色 + 黄铜金 */
+  --color-primary:        #0D9488;
+  --color-primary-hover:  #0F766E;
+  --color-primary-soft:   #F0FDFA;
+  --color-secondary:      #78716C;
+  --color-secondary-soft: #F5F0E6;
+  --color-accent:         #B45309;
+  --color-accent-soft:    #FFFBEB;
   --color-success:        #16A34A;
   --color-success-soft:   #DCFCE7;
-  --color-warning:        #F59E0B;
+  --color-warning:        #D97706;
   --color-warning-soft:   #FEF3C7;
   --color-danger:         #DC2626;
   --color-danger-soft:    #FEF2F2;
@@ -50,21 +45,21 @@
   /* 阵营色（游戏内语义） */
   --faction-wolf:      #DC2626;
   --faction-villager:  #2563EB;
-  --faction-neutral:   #7C3AED;
+  --faction-neutral:   #0D9488;
   --faction-fraud:     #F43F5E;
 
   /* 状态色 */
   --status-alive:     #16A34A;
-  --status-thinking:  #F59E0B;
+  --status-thinking:  #D97706;
   --status-dead:      #CBD5E1;
   --status-danger:    #DC2626;
-  --status-human:     #D97706;
+  --status-human:     #B45309;
 
   /* 边框 */
-  --border-default:   #E2E8F0;
-  --border-light:     #F1F5F9;
-  --border-focus:     #2563EB;
-  --ring-focus:       rgba(37, 99, 235, 0.25);
+  --border-default:   #E8E0D3;
+  --border-light:     #F5F0E6;
+  --border-focus:     #0D9488;
+  --ring-focus:       rgba(13, 148, 136, 0.25);
 
   /* 圆角 */
   --radius-sm:   4px;
@@ -88,16 +83,19 @@
   --z-40:   40;
   --z-50:   50;
 
-  /* 动效 */
+  /* 动效 Token（机械表微节奏） */
   --duration-instant: 100ms;
-  --duration-fast:    150ms;
+  --duration-fast:    180ms;
   --duration-normal:  250ms;
   --duration-slow:    350ms;
-  --easing-default:   cubic-bezier(0.4, 0, 0.2, 1);
-  --easing-enter:     cubic-bezier(0, 0, 0.2, 1);
-  --easing-exit:      cubic-bezier(0.4, 0, 1, 1);
+  --duration-reveal:  500ms;
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-enter:    cubic-bezier(0, 0, 0.2, 1);
+  --easing-exit:     cubic-bezier(0.4, 0, 1, 1);
+  --spring-gentle:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-snappy:   cubic-bezier(0.34, 1.3, 0.64, 1);
 
-  /* 间距（供参考，组件内用内联或 Tailwind） */
+  /* 间距 */
   --space-xs:   4px;
   --space-sm:   8px;
   --space-md:   12px;
@@ -107,41 +105,38 @@
   --space-3xl:  32px;
   --space-4xl:  48px;
 
-  /* 字体 */
-  --font-sans:  'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+  /* 字体（Playfair Display + Inter + JetBrains Mono） */
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 
-  /* 字重快捷 */
-  --weight-light:  300;
-  --weight-normal: 400;
-  --weight-medium: 500;
+  /* 字重 */
+  --weight-light:    300;
+  --weight-normal:   400;
+  --weight-medium:   500;
   --weight-semibold: 600;
-  --weight-bold:   700;
+  --weight-bold:     700;
 }
 
-/* ── 暗色模式（柔和石板灰，非纯黑）─────────────────────── */
+/* ── 暗色模式（柔和石板灰，非纯黑） ─────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-root:       #1E293B;
     --bg-surface:    #334155;
     --bg-elevated:   #334155;
     --bg-hover:      #475569;
-    --bg-active:     #1E3A5F;
+    --bg-active:     #134E4A;
     --bg-overlay:    rgba(0, 0, 0, 0.50);
     --bg-muted:      #334155;
-
-    --glass-bg:      rgba(51, 65, 85, 0.85);
-    --glass-border:  rgba(255, 255, 255, 0.08);
-    --glass-shadow:  0 8px 32px rgba(0, 0, 0, 0.30);
 
     --text-primary:    #F1F5F9;
     --text-secondary:  #94A3B8;
     --text-tertiary:   #64748B;
     --text-on-brand:   #FFFFFF;
-    --text-link:       #60A5FA;
+    --text-link:       #5EEAD4;
 
-    --color-primary-soft:   #1E3A5F;
-    --color-secondary-soft: #2E1065;
+    --color-primary-soft:   #134E4A;
+    --color-secondary-soft: #44403C;
     --color-accent-soft:    #431407;
     --color-success-soft:   #14532D;
     --color-warning-soft:   #451A03;
@@ -150,8 +145,8 @@
 
     --border-default:   #475569;
     --border-light:     #334155;
-    --border-focus:     #3B82F6;
-    --ring-focus:       rgba(59, 130, 246, 0.30);
+    --border-focus:     #14B8A6;
+    --ring-focus:       rgba(20, 184, 166, 0.30);
 
     --shadow-L1:   0 1px 2px rgba(0, 0, 0, 0.20);
     --shadow-L2:   0 2px 8px rgba(0, 0, 0, 0.30);
@@ -167,7 +162,7 @@
   }
 }
 
-/* ── 全局基础样式 ────────────────────────────────────────── */
+/* ── 全局基础 ──────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -185,19 +180,19 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 按钮基础交互 */
 button {
   cursor: pointer;
   font-family: inherit;
   user-select: none;
-  transition: opacity var(--duration-fast) var(--easing-default),
-              transform var(--duration-fast) var(--easing-default);
+  transition: opacity var(--duration-fast) var(--easing-standard),
+              transform var(--duration-fast) var(--spring-snappy),
+              box-shadow var(--duration-fast) var(--easing-standard);
 }
 button:active {
   transform: scale(0.97);
 }
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 button:focus-visible {
@@ -205,7 +200,60 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* 滚动条 */
+/* ═══════════════════════════════════════════════════════════════
+   动效关键帧 —— The Club Room 机械表微节奏
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 状态灯：思考中的缓慢呼吸 */
+@keyframes pulse-breathing {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* 状态灯：当前发言者的外圈光环 */
+@keyframes glow-ring {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  50% { box-shadow: 0 0 0 7px var(--color-primary-soft); }
+}
+
+/* GameSelector 下拉：从上展开 */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: scaleY(0.9) translateY(-4px); }
+  to   { opacity: 1; transform: scaleY(1) translateY(0); }
+}
+
+/* 进度条完成闪绿 */
+@keyframes progress-complete {
+  0%   { background: var(--color-primary); }
+  50%  { background: var(--color-success); }
+  100% { background: var(--color-primary); }
+}
+
+/* 弹窗卡片从天而降（配合 Framer Motion spring） */
+@keyframes modal-card-in {
+  from { opacity: 0; transform: scale(0.92) translateY(24px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 遗言气泡：墨迹洇开 */
+@keyframes ink-bleed {
+  from { background-color: var(--bg-surface); }
+  to   { background-color: var(--color-danger-soft); }
+}
+
+/* 排名列表逐行浮现 */
+@keyframes rank-reveal {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* 停止按钮红色脉冲 */
+@keyframes stop-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  50%  { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -218,7 +266,6 @@ button:focus-visible {
   border-radius: var(--radius-full);
 }
 
-/* 减少动画偏好 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

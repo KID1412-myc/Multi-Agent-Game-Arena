@@ -21,6 +21,7 @@ def _env_path() -> Path:
 load_dotenv(dotenv_path=_env_path())
 
 import json
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -79,6 +80,36 @@ async def list_replays(game_id: str = ""):
     return {"replays": replays[:50]}
 
 
+class BatchDeleteBody(BaseModel):
+    paths: list[str]
+
+@app.post("/api/replays/batch-delete")
+async def batch_delete_replays(body: BatchDeleteBody):
+    """批量删除回放文件"""
+    paths = body.paths
+    if not paths:
+        raise HTTPException(status_code=400, detail="paths 不能为空")
+    games_root = _replay_games_root()
+    deleted = []
+    failed = []
+    for path in paths:
+        replay_path = games_root / path
+        if not replay_path.exists():
+            failed.append({"path": path, "reason": "文件不存在"})
+            continue
+        try:
+            replay_path.resolve().relative_to(games_root.resolve())
+        except ValueError:
+            failed.append({"path": path, "reason": "非法的文件路径"})
+            continue
+        try:
+            replay_path.unlink()
+            deleted.append(path)
+        except Exception as e:
+            failed.append({"path": path, "reason": str(e)})
+    return {"deleted": deleted, "failed": failed}
+
+
 @app.get("/api/replays/{path:path}")
 async def get_replay(path: str):
     """获取回放文件完整内容"""
@@ -97,7 +128,6 @@ async def delete_replay(path: str):
     replay_path = games_root / path
     if not replay_path.exists():
         raise HTTPException(status_code=404, detail="回放文件不存在")
-    # 安全检查：确保路径在 games 目录下，防止路径穿越攻击
     try:
         replay_path.resolve().relative_to(games_root.resolve())
     except ValueError:

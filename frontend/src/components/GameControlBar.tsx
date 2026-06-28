@@ -20,12 +20,14 @@ interface Props {
 
 export function GameControlBar({ connected, onStart, onStop, onPause, onResume, onStep, onNextRound, onAuto, selectedGameId, gameName }: Props) {
   const [showRules, setShowRules] = useState(false);
+  const [stopKey, setStopKey] = useState(0);
   const ctx = useArenaStore((s) => s.ctx);
   const gameStatus = useArenaStore((s) => s.gameStatus);
+  const isLoading = gameStatus === 'loading';
   const isRunning = gameStatus === 'running';
   const isPaused = gameStatus === 'paused';
   const isRoundPaused = gameStatus === 'round_paused';
-  const isActive = isRunning || isPaused || isRoundPaused || gameStatus === 'finished';
+  const isActive = isLoading || isRunning || isPaused || isRoundPaused || gameStatus === 'finished';
 
   return (
     <div style={{
@@ -33,15 +35,15 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400 }}>v2.2.0</span></span>
+      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '-0.01em' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>v2.2.1</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
           <span>{ctx.game_config.name}</span>
           <span style={{ color: 'var(--border-default)' }}>|</span>
           <span>Round {ctx.round.round_number}/{ctx.game_config.total_rounds}</span>
-          {isPaused && <span style={{ background: '#FEF3C7', color: '#D97706', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>已暂停</span>}
-          {isRoundPaused && <span style={{ background: '#DBEAFE', color: '#2563EB', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>轮间等待</span>}
+          {isPaused && <span style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>已暂停</span>}
+          {isRoundPaused && <span style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>轮间等待</span>}
         </div>
       )}
 
@@ -57,13 +59,14 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         <button onClick={onStart} disabled={isActive}
           style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
                    border: '1px solid var(--color-primary)', borderRadius: 'var(--radius-md)', background: 'var(--color-primary)', color: 'var(--text-on-brand)' }}>
-          <Play size={12} /> 启动
+          {isLoading ? <Activity size={12} style={{ animation: 'pulse-breathing 1s ease-in-out infinite' }} /> : <Play size={12} />}
+          {isLoading ? '启动中...' : '启动'}
         </button>
 
         {isRunning && (
           <button onClick={onPause}
             style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                     border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', color: '#D97706' }}>
+                     border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-md)', background: 'transparent', color: '#D97706' }}>
             <Pause size={12} /> 暂停
           </button>
         )}
@@ -92,22 +95,24 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
             </button>
             <button onClick={onStep}
               style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                       border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', color: 'var(--color-secondary)' }}>
+                       border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--color-secondary)' }}>
               <SkipForward size={12} /> 单步
             </button>
           </>
         )}
 
-        <button onClick={onStop}
+        <button onClick={() => { setStopKey(k => k + 1); onStop(); }}
+          key={stopKey}
           style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                   border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', color: 'var(--color-danger)' }}
+                   border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--color-danger)',
+                   animation: stopKey > 0 ? 'stop-pulse 0.4s ease-out' : 'none' }}
           disabled={!isActive}>
           <Square size={12} /> 停止
         </button>
 
         <button onClick={() => setShowRules(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-secondary)' }}>
           <BookOpen size={12} /> 规则
         </button>
 

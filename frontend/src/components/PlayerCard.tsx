@@ -5,59 +5,79 @@ import { useArenaStore } from '../store/arenaStore';
 
 interface Props { player: PlayerState; resources: ResourceDef[]; index: number; }
 
-export function PlayerCard({ player, resources }: Props) {
+export function PlayerCard({ player, resources, index }: Props) {
   const isSelected = useArenaStore((s) => s.selectedPlayerId === player.id);
   const showCoT = useArenaStore((s) => s.showCoT);
   const setSelectedPlayer = useArenaStore((s) => s.setSelectedPlayer);
   const ctx = useArenaStore((s) => s.ctx);
   const hasHuman = Object.values(ctx?.round?.players || {}).some(p => p.is_human);
-
   const isActive = player.is_current_speaker;
   const isThinking = player.is_thinking;
   const isDead = !player.is_alive;
   const cot = player.last_cot;
-
   const colorTag = player.color_tag || '';
   const fraudTag = player.fraud_tag || '';
   const seeTag = player.see_tag || '';
 
+  const staggerDelay = index * 0.05;
+
   return (
     <motion.div
       onClick={() => { if (!hasHuman) setSelectedPlayer(isSelected ? null : player.id); }}
-      animate={{ scale: isActive ? 1.02 : 1 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{
+        opacity: isDead ? 0.4 : 1,
+        y: 0,
+        scale: isActive ? 1.02 : isDead ? 0.97 : 1,
+        filter: isDead ? 'grayscale(0.5)' : 'grayscale(0)',
+        backgroundColor: isActive ? 'var(--bg-active)' : 'var(--bg-surface)',
+      }}
+      transition={{
+        duration: isActive ? 0.25 : isDead ? 0.35 : 0.18,
+        ease: isActive ? [0.34, 1.3, 0.64, 1] : isDead ? [0.4, 0, 1, 1] : [0, 0, 0.2, 1],
+        delay: staggerDelay,
+      }}
+      whileHover={{ y: -2, boxShadow: 'var(--shadow-L2)', transition: { duration: 0.18 } }}
+      whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
       style={{
-        background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', padding: '8px 10px', cursor: 'pointer',
-        border: isActive ? '2px solid var(--color-primary)' : '1px solid var(--border-default)',
-        boxShadow: isActive ? '0 2px 12px rgba(59,130,246,0.12)' : 'var(--shadow-L1)',
-        opacity: isDead ? 0.4 : 1, transition: 'all var(--duration-fast) var(--easing-default)',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-        minWidth: 0,
-        position: 'relative',
+        height: '100%',
+        borderRadius: 'var(--radius-lg)', padding: '6px 10px',
+        cursor: hasHuman ? 'default' : 'pointer',
+        borderLeft: isActive ? '4px solid var(--color-primary)'
+          : player.is_human ? '4px solid var(--status-human)'
+          : '3px solid var(--color-primary)',
+        borderTop: '1px solid var(--border-default)',
+        borderRight: '1px solid var(--border-default)',
+        borderBottom: isActive ? '1px solid var(--color-primary)' : '1px solid var(--border-default)',
+        boxShadow: 'var(--shadow-L1)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, position: 'relative',
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3, flexShrink: 0 }}>
         <div style={{
-          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-          background: isActive ? 'var(--color-primary)' : isThinking ? 'var(--status-thinking)' : isDead ? 'var(--status-dead)' : 'var(--status-alive)',
+          width: 8, height: 8,
+          borderRadius: player.is_human ? '1px' : '50%',
+          transform: player.is_human ? 'rotate(45deg)' : 'none',
+          flexShrink: 0,
+          background: isActive ? 'var(--color-primary)' : isThinking ? 'var(--status-thinking)' : isDead ? 'var(--status-dead)' : player.is_human ? 'var(--status-human)' : 'var(--status-alive)',
+          animation: isActive ? 'glow-ring 1.5s ease-in-out infinite'
+            : isThinking ? 'pulse-breathing 2s ease-in-out infinite'
+            : 'none',
         }} />
         <span style={{
-          fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', flex: 1,
+          fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', flex: 1,
+          fontFamily: 'var(--font-display)', letterSpacing: '-0.01em',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{player.name}</span>
         {colorTag && (
           <span style={{ fontSize: 9, fontWeight: 600, flexShrink: 0,
-            color: colorTag === '红' ? 'var(--color-danger)' : colorTag === '蓝' ? 'var(--color-primary)' : 'var(--color-success)',
-            background: 'var(--bg-muted)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>
-            {colorTag}
-          </span>
+            color: colorTag === '红' ? 'var(--faction-wolf)' : colorTag === '蓝' ? 'var(--faction-villager)' : 'var(--color-primary)',
+            background: 'var(--bg-muted)', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{colorTag}</span>
         )}
         {fraudTag && (
-          <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--color-danger)', flexShrink: 0,
-            background: '#FEF2F2', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>
-            {fraudTag}
-          </span>
+          <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--faction-fraud)', flexShrink: 0,
+            background: '#FEF2F2', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{fraudTag}</span>
         )}
         {seeTag && (
           <span style={{ fontSize: 8, color: 'var(--text-tertiary)', flexShrink: 0 }}>{seeTag}</span>
@@ -67,59 +87,46 @@ export function PlayerCard({ player, resources }: Props) {
       </div>
 
       {/* Resources */}
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 4, flexShrink: 0, overflow: 'hidden', maxHeight: 40 }}>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 3, flexShrink: 0, overflow: 'hidden', maxHeight: 32 }}>
         {resources.map((r) => (
-          <span key={r.id} style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg-muted)', padding: '1px 5px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap' }}>
+          <span key={r.id} style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg-muted)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap' }}>
             {r.icon} {player.resources[r.id] ?? 0}{r.unit}
           </span>
         ))}
       </div>
 
-      {/* CoT: hidden when human players present */}
+      {/* CoT */}
       {cot && !isDead && !hasHuman && (
-        <div style={{
-          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', gap: 6,
-          fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.4,
-        }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', gap: 8, fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontWeight: 600, color: 'var(--color-primary)', flexShrink: 0, marginBottom: 1 }}>局势评估</div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
-              {cot.situation_assessment}
-            </div>
+            <div style={{ fontWeight: 600, color: 'var(--color-primary)', flexShrink: 0, marginBottom: 2, fontSize: 10, fontFamily: 'var(--font-display)' }}>局势评估</div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>{cot.situation_assessment}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontWeight: 600, color: 'var(--color-secondary)', flexShrink: 0, marginBottom: 1 }}>内心策略</div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
-              {cot.internal_strategy}
-            </div>
+            <div style={{ fontWeight: 600, color: 'var(--color-accent)', flexShrink: 0, marginBottom: 2, fontSize: 10, fontFamily: 'var(--font-display)' }}>内心策略</div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>{cot.internal_strategy}</div>
           </div>
           {cot.secret_action && isSelected && (
             <div style={{ flexShrink: 0, maxWidth: 120 }}>
-              <div style={{ fontWeight: 600, color: 'var(--color-danger)', marginBottom: 1 }}>秘密行动</div>
-              <div style={{ maxHeight: 60, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>
-                {cot.secret_action}
-              </div>
+              <div style={{ fontWeight: 600, color: 'var(--color-danger)', marginBottom: 2, fontSize: 10, fontFamily: 'var(--font-display)' }}>秘密行动</div>
+              <div style={{ maxHeight: 60, overflowY: 'auto', overflowX: 'hidden', wordBreak: 'break-word' }}>{cot.secret_action}</div>
             </div>
           )}
         </div>
       )}
 
-      {/* CoT placeholder */}
       {!cot && !isDead && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 9, color: 'var(--text-tertiary)' }}>等待行动...</span>
+          <span style={{ fontSize: 9, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>等待行动…</span>
         </div>
       )}
-
       {!cot && isDead && (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 9, color: 'var(--text-tertiary)' }}>已淘汰</span>
         </div>
       )}
-
-      {/* CoT corner icon */}
       {cot && !hasHuman && (
-        <Brain size={10} style={{ position: 'absolute', bottom: 4, right: 6, color: isSelected ? 'var(--color-primary)' : 'var(--text-tertiary)' }} />
+        <Brain size={10} style={{ position: 'absolute', bottom: 6, right: 8, color: isSelected ? 'var(--color-primary)' : 'var(--text-tertiary)' }} />
       )}
     </motion.div>
   );

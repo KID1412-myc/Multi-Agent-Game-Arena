@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { GameControlBar } from './components/GameControlBar';
 import { GameSelector } from './components/GameSelector';
 import { ArenaLayout } from './components/ArenaLayout';
@@ -135,7 +136,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-root)' }}>
       <CyberBackground />
 
       <GameControlBar
@@ -151,15 +152,17 @@ export default function App() {
         gameName={ctx?.game_config.name}
       />
 
-      <div style={{ padding: '6px 20px', borderBottom: '1px solid #eee', background: '#fafafa', display: 'flex', alignItems: 'center' }}>
+      <div style={{ padding: '6px 20px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center' }}>
         <GameSelector onSelect={setSelectedGameId} disabled={gameStatus === 'running' || gameStatus === 'paused'} />
-        {gameStatus === 'idle' && <span style={{ fontSize: 11, color: '#bbb', marginLeft: 12 }}>Select a game and press Start</span>}
+        {gameStatus === 'idle' && <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 12 }}>Select a game and press Start</span>}
       </div>
 
-      {gameStatus === 'finished' && !gameOverDismissed && (
-        <GameOverModal winnerName={winnerName} ranking={ranking} extra={extra}
-          onClose={() => setGameOverDismissed(true)} />
-      )}
+      <AnimatePresence>
+        {gameStatus === 'finished' && !gameOverDismissed && (
+          <GameOverModal winnerName={winnerName} ranking={ranking} extra={extra}
+            onClose={() => setGameOverDismissed(true)} />
+        )}
+      </AnimatePresence>
 
       <ArenaLayout />
       <HumanInput ws={ws} />
