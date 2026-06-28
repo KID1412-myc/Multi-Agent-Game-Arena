@@ -29,22 +29,22 @@ export function NightPanel() {
         onClick={() => setCollapsed(!collapsed)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer', userSelect: 'none' }}
       >
-        {collapsed ? <ChevronRight size={11} style={{ color: '#6366f1' }} /> : <ChevronDown size={11} style={{ color: '#6366f1' }} />}
-        <Moon size={13} style={{ color: '#6366f1' }} />
-        <span style={{ fontWeight: 700, fontSize: 12, color: '#6366f1' }}>夜晚行动</span>
-        <span style={{ fontSize: 10, color: '#999', marginLeft: 'auto' }}>{nightLog.length} 条</span>
+        {collapsed ? <ChevronRight size={11} style={{ color: 'var(--color-secondary)' }} /> : <ChevronDown size={11} style={{ color: 'var(--color-secondary)' }} />}
+        <Moon size={13} style={{ color: 'var(--color-secondary)' }} />
+        <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--color-secondary)' }}>夜晚行动</span>
+        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>{nightLog.length} 条</span>
       </div>
       {!collapsed && (
         <div ref={scrollRef} style={{
           maxHeight: 200, overflowY: 'auto', overflowX: 'hidden',
-          fontSize: 10, lineHeight: 1.5, color: '#555',
-          background: '#fafafa', borderRadius: 6, padding: '4px 6px',
-          border: '1px solid #eee',
+          fontSize: 10, lineHeight: 1.5, color: 'var(--text-secondary)',
+          background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', padding: '4px 6px',
+          border: '1px solid var(--border-default)',
         }}>
           {nightLog.map((entry, i) => (
             <div key={i} style={{ padding: '1px 0', wordBreak: 'break-word' }}>
               <span style={{ marginRight: 3 }}>{ACTION_ICONS[entry.action] || '•'}</span>
-              <span style={{ fontWeight: 600, color: '#1a1a1a' }}>{entry.player_name}({entry.player_id})</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{entry.player_name}({entry.player_id})</span>
               <span>: {entry.detail}</span>
             </div>
           ))}

@@ -3,7 +3,7 @@ import type { PlayerState, ResourceDef } from '../types/arena';
 
 interface Props { players: PlayerState[]; resources: ResourceDef[]; }
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
+const COLORS = ['#0D9488', '#78716C', '#B45309', '#D97706', '#DC2626', '#F43F5E', '#6366F1', '#14B8A6'];
 
 export function ResourceChart({ players, resources }: Props) {
   const primary = resources[0];
@@ -21,11 +21,11 @@ export function ResourceChart({ players, resources }: Props) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="name" tick={{ fill: '#999', fontSize: 9 }} axisLine={{ stroke: '#eee' }} tickLine={false} />
-        <YAxis tick={{ fill: '#999', fontSize: 9 }} axisLine={{ stroke: '#eee' }} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#E8E0D3" />
+        <XAxis dataKey="name" tick={{ fill: '#94A3B8', fontSize: 9 }} axisLine={{ stroke: '#E8E0D3' }} tickLine={false} />
+        <YAxis tick={{ fill: '#94A3B8', fontSize: 9 }} axisLine={{ stroke: '#E8E0D3' }} tickLine={false} />
         <Tooltip
-          contentStyle={{ background: '#fff', border: '1px solid #e5e5e5', borderRadius: 6, fontSize: 11, color: '#333' }}
+          contentStyle={{ background: '#FFFFFF', border: '1px solid #E8E0D3', borderRadius: 6, fontSize: 11, color: '#1E293B' }}
           formatter={(v: number) => [`${v}${primary.unit}`, primary.label]}
           labelFormatter={(_: string, payload: any) => payload?.[0]?.payload?.fullName || ''}
         />

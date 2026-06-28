@@ -77,7 +77,7 @@ export function PlayerCard({ player, resources, index }: Props) {
         )}
         {fraudTag && (
           <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--faction-fraud)', flexShrink: 0,
-            background: '#FEF2F2', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{fraudTag}</span>
+            background: 'var(--color-danger-soft)', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{fraudTag}</span>
         )}
         {seeTag && (
           <span style={{ fontSize: 8, color: 'var(--text-tertiary)', flexShrink: 0 }}>{seeTag}</span>

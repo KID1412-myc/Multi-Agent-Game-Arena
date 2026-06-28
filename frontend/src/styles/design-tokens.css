@@ -162,6 +162,83 @@
   }
 }
 
+/* 手动暗色模式（覆盖系统自动检测） */
+[data-theme="dark"] {
+  --bg-root:       #1E293B;
+  --bg-surface:    #334155;
+  --bg-elevated:   #334155;
+  --bg-hover:      #475569;
+  --bg-active:     #134E4A;
+  --bg-overlay:    rgba(0, 0, 0, 0.50);
+  --bg-muted:      #334155;
+
+  --text-primary:    #F1F5F9;
+  --text-secondary:  #94A3B8;
+  --text-tertiary:   #64748B;
+  --text-on-brand:   #FFFFFF;
+  --text-link:       #5EEAD4;
+
+  --color-primary-soft:   #134E4A;
+  --color-secondary-soft: #44403C;
+  --color-accent-soft:    #431407;
+  --color-success-soft:   #14532D;
+  --color-warning-soft:   #451A03;
+  --color-danger-soft:    #450A0A;
+  --color-info-soft:      #0C4A6E;
+
+  --border-default:   #475569;
+  --border-light:     #334155;
+  --border-focus:     #14B8A6;
+  --ring-focus:       rgba(20, 184, 166, 0.30);
+
+  --shadow-L1:   0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-L2:   0 2px 8px rgba(0, 0, 0, 0.30);
+  --shadow-L3:   0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-L4:   0 8px 32px rgba(0, 0, 0, 0.40);
+
+  --status-alive:     #22C55E;
+  --status-thinking:  #FBBF24;
+  --status-dead:      #64748B;
+
+  --faction-wolf:      #EF4444;
+  --faction-villager:  #60A5FA;
+}
+
+[data-theme="light"] {
+  --bg-root:       #FFFBEB;
+  --bg-surface:    #FFFFFF;
+  --bg-elevated:   #FFFBEB;
+  --bg-hover:      #FEF3C7;
+  --bg-active:     #F0FDFA;
+  --bg-overlay:    rgba(30, 41, 59, 0.35);
+  --bg-muted:      #F5F0E6;
+  --text-primary:    #1E293B;
+  --text-secondary:  #64748B;
+  --text-tertiary:   #94A3B8;
+  --text-on-brand:   #FFFFFF;
+  --text-link:       #0D9488;
+  --color-primary-soft:   #F0FDFA;
+  --color-secondary-soft: #F5F0E6;
+  --color-accent-soft:    #FFFBEB;
+  --color-success-soft:   #DCFCE7;
+  --color-warning-soft:   #FEF3C7;
+  --color-danger-soft:    #FEF2F2;
+  --color-info-soft:      #E0F2FE;
+  --border-default:   #E8E0D3;
+  --border-light:     #F5F0E6;
+  --border-focus:     #0D9488;
+  --ring-focus:       rgba(13, 148, 136, 0.25);
+  --shadow-L1:   0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-L2:   0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-L3:   0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-L4:   0 8px 32px rgba(0, 0, 0, 0.10);
+  --status-alive:     #16A34A;
+  --status-thinking:  #D97706;
+  --status-dead:      #CBD5E1;
+  --faction-wolf:      #DC2626;
+  --faction-villager:  #2563EB;
+}
+
 /* ── 全局基础 ──────────────────────────────────────────── */
 * {
   margin: 0;

@@ -136,6 +136,21 @@ async def delete_replay(path: str):
     return {"status": "deleted", "path": path}
 
 
+@app.get("/api/readme")
+async def get_readme():
+    """获取项目 README 内容"""
+    readme_path = Path(__file__).parent.parent / "README.md"
+    if not readme_path.exists():
+        # PyInstaller 打包模式
+        import sys as _sys
+        if getattr(_sys, 'frozen', False):
+            readme_path = Path(_sys._MEIPASS) / "README.md"
+    if not readme_path.exists():
+        raise HTTPException(status_code=404, detail="README 文件不存在")
+    with open(readme_path, "r", encoding="utf-8") as f:
+        return {"content": f.read()}
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

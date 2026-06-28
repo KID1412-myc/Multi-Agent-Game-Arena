@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward, BookOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward, BookOpen, Sun, Moon } from 'lucide-react';
 import { useArenaStore } from '../store/arenaStore';
 import { ModelSettings } from './ModelSettings';
 import { RuleModal } from './RuleModal';
+import { ReadmeModal } from './ReadmeModal';
 import { ReplayPlayer } from './ReplayPlayer';
 
 interface Props {
@@ -20,8 +21,26 @@ interface Props {
 
 export function GameControlBar({ connected, onStart, onStop, onPause, onResume, onStep, onNextRound, onAuto, selectedGameId, gameName }: Props) {
   const [showRules, setShowRules] = useState(false);
+  const [showReadme, setShowReadme] = useState(false);
   const [stopKey, setStopKey] = useState(0);
+  const getSystemTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' as const;
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(getSystemTheme);
   const ctx = useArenaStore((s) => s.ctx);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // 系统主题变了立刻跟，不用刷新
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setTheme(e.matches ? 'dark' : 'light');
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
   const gameStatus = useArenaStore((s) => s.gameStatus);
   const isLoading = gameStatus === 'loading';
   const isRunning = gameStatus === 'running';
@@ -66,7 +85,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         {isRunning && (
           <button onClick={onPause}
             style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                     border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-md)', background: 'transparent', color: '#D97706' }}>
+                     border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-md)', background: 'var(--color-warning-soft)', color: '#B45309' }}>
             <Pause size={12} /> 暂停
           </button>
         )}
@@ -95,7 +114,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
             </button>
             <button onClick={onStep}
               style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                       border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--color-secondary)' }}>
+                       border: '1px solid var(--color-secondary)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', color: 'var(--color-secondary)' }}>
               <SkipForward size={12} /> 单步
             </button>
           </>
@@ -104,20 +123,36 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         <button onClick={() => { setStopKey(k => k + 1); onStop(); }}
           key={stopKey}
           style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                   border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--color-danger)',
+                   border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', background: 'var(--color-danger-soft)', color: 'var(--color-danger)',
                    animation: stopKey > 0 ? 'stop-pulse 0.4s ease-out' : 'none' }}
           disabled={!isActive}>
           <Square size={12} /> 停止
         </button>
 
+        <button onClick={toggleTheme} title={theme === 'light' ? '切换暗色模式' : '切换浅色模式'}
+          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 8px', fontSize: 12,
+                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+          {theme === 'light' ? <Moon size={12} /> : <Sun size={12} />}
+        </button>
+
+        <button onClick={() => setShowReadme(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
+                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+          <BookOpen size={12} /> 说明
+        </button>
+
         <button onClick={() => setShowRules(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 12px', fontSize: 12,
-                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-secondary)' }}>
+                   border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
           <BookOpen size={12} /> 规则
         </button>
 
         <ModelSettings gameId={selectedGameId} disabled={isActive} />
         <ReplayPlayer />
+
+        {showReadme && (
+          <ReadmeModal onClose={() => setShowReadme(false)} />
+        )}
 
         {showRules && (
           <RuleModal

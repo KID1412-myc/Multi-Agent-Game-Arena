@@ -27,7 +27,11 @@ if frontend_dist.exists():
             dst = str(f.parent).replace('\\', '/')
             frontend_files.append((src, dst))
 
-all_data = game_files + frontend_files
+# ── README（项目说明） ──
+readme_file = ROOT / 'README.md'
+readme_data = [(str(readme_file).replace('\\', '/'), '.')] if readme_file.exists() else []
+
+all_data = game_files + frontend_files + readme_data
 
 a = Analysis(
     ['run.py'],

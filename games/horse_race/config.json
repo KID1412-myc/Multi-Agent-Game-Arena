@@ -86,7 +86,7 @@
     "hooks": "hooks.py",
     "state_machine": null,
     "schema_override": null,
-    "locked": false,
+    "locked": true,
     "shuffle_order": true,
     "two_phase": true,
     "epilogue": true

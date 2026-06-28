@@ -14,7 +14,11 @@ export function GameSelector({ onSelect, disabled }: Props) {
     fetch('/api/games')
       .then((r) => r.json())
       .then((data) => {
-        const list = data.games || [];
+        const list = (data.games || []).sort((a: any, b: any) => {
+          if (a.locked && !b.locked) return 1;
+          if (!a.locked && b.locked) return -1;
+          return 0;
+        });
         setGames(list);
         const first = list.find((g: any) => !g.locked) || list[0];
         if (first) {
@@ -37,7 +41,7 @@ export function GameSelector({ onSelect, disabled }: Props) {
       <button onClick={() => !disabled && setOpen(!open)} disabled={disabled}
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', fontSize: 12,
                  border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
-                 background: 'transparent', color: 'var(--text-primary)',
+                 background: 'var(--bg-hover)', color: 'var(--text-primary)',
                  cursor: disabled ? 'not-allowed' : 'pointer', minWidth: 180,
                  opacity: disabled ? 0.5 : 1 }}>
         <span style={{ flex: 1, textAlign: 'left' }}>{loading ? '加载中...' : selectedGame?.name || '选择游戏'}</span>

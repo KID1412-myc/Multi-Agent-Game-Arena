@@ -2,32 +2,20 @@ import { useEffect, useState } from 'react';
 import { X, BookOpen } from 'lucide-react';
 
 interface Props {
-  gameId: string | null;
-  gameName?: string;
   onClose: () => void;
 }
 
-export function RuleModal({ gameId, gameName: initialName, onClose }: Props) {
-  const [rules, setRules] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [displayName, setDisplayName] = useState(initialName);
+export function ReadmeModal({ onClose }: Props) {
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!gameId) return;
-    setLoading(true);
-    // 并行获取规则和游戏列表（用于取中文名）
-    Promise.all([
-      fetch('/api/games/' + gameId + '/rules').then(r => r.json()),
-      fetch('/api/games').then(r => r.json()),
-    ]).then(([ruleData, gamesData]) => {
-      setRules(ruleData.rules || null);
-      const game = (gamesData.games || []).find((g: any) => g.id === gameId);
-      if (game?.name) setDisplayName(game.name);
-    }).catch(() => setRules(null))
+    fetch('/api/readme')
+      .then(r => r.json())
+      .then(d => setContent(d.content || null))
+      .catch(() => setContent(null))
       .finally(() => setLoading(false));
-  }, [gameId]);
-
-  if (!gameId) return null;
+  }, []);
 
   return (
     <div onClick={onClose} style={{
@@ -35,31 +23,28 @@ export function RuleModal({ gameId, gameName: initialName, onClose }: Props) {
       background: 'var(--bg-overlay)', display: 'flex',
       alignItems: 'center', justifyContent: 'center',
     }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', maxWidth: 640, width: '90%',
-        maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)',
+        maxWidth: 800, width: '90%', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
         boxShadow: 'var(--shadow-L4)',
       }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0,
+          display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+          padding: '16px 20px', borderBottom: '1px solid var(--border-default)',
         }}>
           <BookOpen size={18} style={{ color: 'var(--color-primary)' }} />
-          <span style={{ fontWeight: 700, fontSize: 15, flex: 1, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{displayName} 规则</span>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 4,
-          }}>
+          <span style={{ fontWeight: 700, fontSize: 15, flex: 1, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>项目说明</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 4 }}>
             <X size={18} />
           </button>
         </div>
-
-        <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, fontSize: 13, lineHeight: 1.7, color: 'var(--text-primary)' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', fontSize: 13, lineHeight: 1.7, color: 'var(--text-primary)', minHeight: 0 }}>
           {loading ? (
             <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 32 }}>加载中...</div>
-          ) : rules ? (
-            <div dangerouslySetInnerHTML={{ __html: mdToHtml(rules) }} />
+          ) : content ? (
+            <div dangerouslySetInnerHTML={{ __html: mdToHtml(content) }} />
           ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 32 }}>该游戏暂无规则文档</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 32 }}>暂无内容</div>
           )}
         </div>
       </div>
@@ -67,39 +52,32 @@ export function RuleModal({ gameId, gameName: initialName, onClose }: Props) {
   );
 }
 
-/** Markdown → HTML */
 function mdToHtml(md: string): string {
-  // 先处理代码块（保护起来不被后续正则破坏）
   const codeBlocks: string[] = [];
   let html = md.replace(/```[\s\S]*?```/g, (block) => {
     codeBlocks.push(block);
     return '%%CODE' + (codeBlocks.length - 1) + '%%';
   });
 
-  // 合并连续空行为单个段落分隔
   html = html.replace(/\n{3,}/g, '\n\n');
 
-  // 标题
   html = html
     .replace(/^#### (.+)$/gm, '<h4 style="margin:10px 0 2px;font-size:13px;font-weight:600;">$1</h4>')
     .replace(/^### (.+)$/gm, '<h3 style="margin:12px 0 4px;font-size:14px;font-weight:600;">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 style="margin:14px 0 4px;font-size:15px;font-weight:700;">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1 style="margin:16px 0 6px;font-size:17px;font-weight:700;">$1</h1>');
 
-  // 列表
   html = html
     .replace(/^- (.+)$/gm, '<li style="margin:1px 0 1px 16px;">$1</li>')
     .replace(/^(\d+)\. (.+)$/gm, '<li style="margin:1px 0 1px 16px;">$2</li>');
 
-  // 把连续的 <li> 包进 <ul>
   html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/gm, (match) => {
     return '<ul style="margin:2px 0;padding:0;">' + match.replace(/\n/g, '') + '</ul>';
   });
 
-  // 粗体
   html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 
-  // 表格（多行连续 |...| 识别为表格）
+  // 表格（必须先匹配多行，再处理单行）
   html = html.replace(/(^\|.+\|$\n?)+/gm, (tableBlock) => {
     const rows = tableBlock.trim().split('\n').filter(line => line.includes('|'));
     if (rows.length < 2) return tableBlock;
@@ -118,16 +96,14 @@ function mdToHtml(md: string): string {
     return tableHtml;
   });
 
-  // 段落：双换行 → 段落，单换行 → <br/>
   const paragraphs = html.split(/\n\n+/);
   html = paragraphs.map(p => {
     const trimmed = p.trim();
     if (!trimmed) return '';
-    if (/^<(h[1-4]|ul|div|pre)/.test(trimmed)) return trimmed;
+    if (/^<(h[1-4]|ul|table|div|pre)/.test(trimmed)) return trimmed;
     return '<p style="margin:4px 0;">' + trimmed.replace(/\n/g, '<br/>') + '</p>';
   }).join('');
 
-  // 恢复代码块
   html = html.replace(/%%CODE(\d+)%%/g, (_, i) => {
     const block = codeBlocks[parseInt(i)];
     return '<pre style="background:var(--bg-muted);padding:8px;border-radius:4px;font-size:11px;overflow-x:auto;margin:4px 0;">'

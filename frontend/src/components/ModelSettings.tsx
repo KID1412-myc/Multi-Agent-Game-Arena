@@ -5,23 +5,23 @@ import { useArenaStore } from '../store/arenaStore';
 
 // ── Styles ──
 const B: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 9999,
-  backgroundColor: 'rgba(0,0,0,0.4)',
+  position: 'fixed', inset: 0, zIndex: 'var(--z-40)' as any,
+  backgroundColor: 'var(--bg-overlay)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 const P: React.CSSProperties = {
-  background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 780,
-  maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+  background: 'var(--bg-root)', borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: 780,
+  maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-L4)',
 };
 const I: React.CSSProperties = {
-  background: '#f9f9f9', border: '1px solid #e5e5e5', borderRadius: 6,
-  padding: '6px 10px', fontSize: 12, color: '#333', fontFamily: 'monospace', outline: 'none',
+  background: 'var(--bg-muted)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
+  padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', outline: 'none',
 };
-const S: React.CSSProperties = { ...I, fontFamily: 'system-ui', color: '#555', cursor: 'pointer' };
-const L: React.CSSProperties = { fontSize: 13, fontWeight: 600 };
+const S: React.CSSProperties = { ...I, fontFamily: 'var(--font-sans)', color: 'var(--text-secondary)', cursor: 'pointer' };
+const L: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' };
 const R: React.CSSProperties = { display: 'flex', gap: 8, alignItems: 'center' };
 const BTN = (bg: string, c: string, bc: string): React.CSSProperties => ({
-  padding: '5px 14px', fontSize: 12, borderRadius: 6, fontWeight: 500,
+  padding: '5px 14px', fontSize: 12, borderRadius: 'var(--radius-md)', fontWeight: 500,
   background: bg, color: c, border: `1px solid ${bc}`, cursor: 'pointer',
 });
 
@@ -108,8 +108,8 @@ export function ModelSettings({ gameId, disabled }: Props) {
     try {
       const res = await fetch(`/api/games/${gameId}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dm_model: cfg.dm_model, dm_provider: cfg.dm_provider, players: cfg.players }) });
       const data = await res.json();
-      setMsg(res.ok ? 'Saved' : `Error: ${data.detail}`);
-    } catch (e: any) { setMsg(`Error: ${e.message}`); }
+      setMsg(res.ok ? '已保存' : `错误：${data.detail}`);
+    } catch (e: any) { setMsg(`错误：${e.message}`); }
     setSaving(false);
   };
 
@@ -133,7 +133,7 @@ export function ModelSettings({ gameId, disabled }: Props) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} disabled={disabled || !gameId}
-        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: (disabled || !gameId) ? 0.4 : 1 }}>
+        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: (disabled || !gameId) ? 0.4 : 1 }}>
         <Settings size={14} /> 设置
       </button>
     );
@@ -143,19 +143,21 @@ export function ModelSettings({ gameId, disabled }: Props) {
     <div style={B} onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}>
       <div style={P} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>设置</h3>
-          <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 0', flexShrink: 0 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>设置</h3>
+          <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
             <X size={20} />
           </button>
         </div>
 
-        {!cfg ? <p style={{ color: '#999', textAlign: 'center', padding: 32 }}>加载中...</p> : (
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', minHeight: 0 }}>
+        {!cfg ? <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 32 }}>加载中...</p> : (
           <>
             {/* DM */}
             <TestableRow
               label="主裁判 (DM)"
-              icon={<Gavel size={14} color="#f59e0b" />}
+              icon={<Gavel size={14} style={{ color: 'var(--color-accent)' }} />}
               slotKey="dm"
               provider={cfg.dm_provider || 'relay'}
               model={cfg.dm_model || ''}
@@ -170,20 +172,20 @@ export function ModelSettings({ gameId, disabled }: Props) {
             {/* Players */}
             <div style={{ marginBottom: 18 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <Cpu size={14} color="#3b82f6" /> <span style={L}>博弈玩家 ({cfg.players?.length || 0})</span>
+                <Cpu size={14} style={{ color: 'var(--color-primary)' }} /> <span style={L}>博弈玩家 ({cfg.players?.length || 0})</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(cfg.players || []).map((p: any, i: number) => {
                   const slotKey = `p${i}`;
                   const isHuman = p.is_human || false;
                   return (
-                    <div key={p.id} style={{ ...R, padding: '6px 8px', borderRadius: 8, background: '#fafafa', border: '1px solid #f0f0f0', opacity: isHuman ? 0.7 : 1 }}>
-                      <span style={{ color: '#ccc', fontSize: 10, width: 16, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
+                    <div key={p.id} style={{ ...R, padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-muted)', border: '1px solid var(--border-light)', opacity: isHuman ? 0.7 : 1 }}>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 10, width: 16, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
                       <input value={p.name || ''} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], name: e.target.value }; setCfg({ ...cfg, players: pl }); }}
-                        style={{ ...I, width: 80, flexShrink: 0, border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, background: 'transparent' }} />
+                        style={{ ...I, width: 80, flexShrink: 0, border: 'none', borderBottom: '1px solid var(--border-default)', borderRadius: 0, background: 'transparent' }} />
                       {/* AI / Human toggle */}
                       <button onClick={() => { const pl = [...cfg.players]; pl[i] = { ...pl[i], is_human: !isHuman }; setCfg({ ...cfg, players: pl }); }}
-                        style={{ ...BTN(isHuman ? '#fef3c7' : '#eff6ff', isHuman ? '#d97706' : '#3b82f6', isHuman ? '#fcd34d' : '#bfdbfe'), fontSize: 10, padding: '2px 6px', flexShrink: 0 }}>
+                        style={{ ...BTN(isHuman ? 'var(--color-accent-soft)' : 'var(--color-primary-soft)', isHuman ? 'var(--color-accent)' : 'var(--color-primary)', isHuman ? 'var(--color-accent-soft)' : 'var(--color-primary-soft)'), fontSize: 10, padding: '2px 6px', flexShrink: 0 }}>
                         {isHuman ? '👤 人类' : '🤖 AI'}
                       </button>
                       {!isHuman && <>
@@ -192,17 +194,17 @@ export function ModelSettings({ gameId, disabled }: Props) {
                           {providers.map(pr => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
                         </select>
                         <input value={p.model || ''} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], model: e.target.value }; setCfg({ ...cfg, players: pl }); }}
-                          style={{ ...I, flex: 1, minWidth: 60 }} placeholder="model" />
+                          style={{ ...I, flex: 1, minWidth: 60 }} placeholder="模型名" />
                         <button onClick={() => testSlot(slotKey, p.provider || 'relay', p.model || 'gpt-4o')} disabled={!!testing[slotKey]}
-                          style={{ ...BTN(testing[slotKey] ? '#f5f5f5' : '#eff6ff', testing[slotKey] ? '#999' : '#3b82f6', testing[slotKey] ? '#e5e5e5' : '#bfdbfe'),
+                          style={{ ...BTN(testing[slotKey] ? 'var(--bg-muted)' : 'var(--color-primary-soft)', testing[slotKey] ? 'var(--text-tertiary)' : 'var(--color-primary)', testing[slotKey] ? 'var(--border-default)' : 'var(--color-primary-soft)'),
                                    display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, padding: '3px 8px', flexShrink: 0 }}>
-                          <Wifi size={10} /> {testing[slotKey] ? '...' : 'Test'}
+                          <Wifi size={10} /> {testing[slotKey] ? '...' : '测试'}
                         </button>
                       </>}
                       {testResults[slotKey] && (
                         <span style={{
                           fontSize: 10, flexShrink: 0, maxWidth: 200, wordBreak: 'break-all', lineHeight: 1.3,
-                          color: testResults[slotKey].startsWith('✓') ? '#065f46' : '#991b1b',
+                          color: testResults[slotKey].startsWith('✓') ? 'var(--color-success)' : 'var(--color-danger)',
                         }}>
                           {testResults[slotKey]}
                         </span>
@@ -215,17 +217,17 @@ export function ModelSettings({ gameId, disabled }: Props) {
 
             {/* ── 分配模式 ── */}
             {assignOptions && (
-              <div style={{ marginBottom: 18, padding: '12px 0', borderTop: '1px solid #eee' }}>
+              <div style={{ marginBottom: 18, padding: '12px 0', borderTop: '1px solid var(--border-default)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                  <Shuffle size={14} color="#8b5cf6" />
+                  <Shuffle size={14} style={{ color: 'var(--color-secondary)' }} />
                   <span style={L}>{assignOptions.title}</span>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
                     <button onClick={() => { setAssignMode('random'); setAssignments({}); }}
-                      style={{ ...BTN(assignMode === 'random' ? '#8b5cf6' : '#fff', assignMode === 'random' ? '#fff' : '#666', assignMode === 'random' ? '#8b5cf6' : '#ddd'), fontSize: 11 }}>
+                      style={{ ...BTN(assignMode === 'random' ? 'var(--color-secondary)' : 'var(--bg-surface)', assignMode === 'random' ? '#fff' : 'var(--text-secondary)', assignMode === 'random' ? 'var(--color-secondary)' : 'var(--border-default)'), fontSize: 11 }}>
                       随机
                     </button>
                     <button onClick={() => setAssignMode('manual')}
-                      style={{ ...BTN(assignMode === 'manual' ? '#8b5cf6' : '#fff', assignMode === 'manual' ? '#fff' : '#666', assignMode === 'manual' ? '#8b5cf6' : '#ddd'), fontSize: 11 }}>
+                      style={{ ...BTN(assignMode === 'manual' ? 'var(--color-secondary)' : 'var(--bg-surface)', assignMode === 'manual' ? '#fff' : 'var(--text-secondary)', assignMode === 'manual' ? 'var(--color-secondary)' : 'var(--border-default)'), fontSize: 11 }}>
                       手动
                     </button>
                   </div>
@@ -233,8 +235,8 @@ export function ModelSettings({ gameId, disabled }: Props) {
                 {assignMode === 'manual' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {(cfg?.players || []).map((p: any) => (
-                      <div key={p.id} style={{ ...R, padding: '4px 8px', borderRadius: 6, background: '#fafafa' }}>
-                        <span style={{ fontSize: 12, width: 90, color: '#555' }}>{p.name} ({p.id})</span>
+                      <div key={p.id} style={{ ...R, padding: '4px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-muted)' }}>
+                        <span style={{ fontSize: 12, width: 90, color: 'var(--text-secondary)' }}>{p.name} ({p.id})</span>
                         {assignOptions.type === 'fraudster' ? (
                           <label style={{ fontSize: 12, cursor: 'pointer' }}>
                             <input type="checkbox" checked={assignments[p.id] === '欺诈师'}
@@ -275,17 +277,18 @@ export function ModelSettings({ gameId, disabled }: Props) {
             )}
 
             {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid #eee' }}>
-              <span style={{ fontSize: 12, color: msg?.includes('Error') ? '#ef4444' : '#10b981' }}>{msg}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid var(--border-default)' }}>
+              <span style={{ fontSize: 12, color: msg?.includes('错误') ? 'var(--color-danger)' : 'var(--color-success)' }}>{msg}</span>
               <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-                <button onClick={() => setOpen(false)} style={BTN('#fff', '#666', '#ddd')}>取消</button>
-                <button onClick={save} disabled={saving} style={BTN('#3b82f6', '#fff', '#3b82f6')}>
+                <button onClick={() => setOpen(false)} style={BTN('var(--bg-surface)', 'var(--text-secondary)', 'var(--border-default)')}>取消</button>
+                <button onClick={save} disabled={saving} style={BTN('var(--color-primary)', '#fff', 'var(--color-primary)')}>
                   <Save size={12} style={{ marginRight: 3, display: 'inline' }} />{saving ? '保存中...' : '保存'}
                 </button>
               </div>
             </div>
           </>
         )}
+        </div>
       </div>
     </div>,
     document.body
@@ -304,14 +307,14 @@ function TestableRow({ label, icon, slotKey, provider, model, onProviderChange, 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         {icon} <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
         <button onClick={onTest} disabled={testing}
-          style={{ ...BTN(testing ? '#f5f5f5' : '#eff6ff', testing ? '#999' : '#3b82f6', testing ? '#e5e5e5' : '#bfdbfe'), marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, padding: '3px 10px' }}>
-          <Wifi size={11} /> {testing ? 'Testing...' : 'Test'}
+          style={{ ...BTN(testing ? 'var(--bg-muted)' : 'var(--color-primary-soft)', testing ? 'var(--text-tertiary)' : 'var(--color-primary)', testing ? 'var(--border-default)' : 'var(--color-primary-soft)'), marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, padding: '3px 10px' }}>
+          <Wifi size={11} /> {testing ? '测试中...' : '测试'}
         </button>
       </div>
       {testResult && (
-        <div style={{ marginBottom: 6, padding: '6px 10px', borderRadius: 6, fontSize: 11, lineHeight: 1.4, wordBreak: 'break-all',
-          background: testResult.startsWith('✓') ? '#ecfdf5' : '#fef2f2',
-          color: testResult.startsWith('✓') ? '#065f46' : '#991b1b' }}>
+        <div style={{ marginBottom: 6, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 11, lineHeight: 1.4, wordBreak: 'break-all',
+          background: testResult.startsWith('✓') ? 'var(--color-success-soft)' : 'var(--color-danger-soft)',
+          color: testResult.startsWith('✓') ? 'var(--color-success)' : 'var(--color-danger)' }}>
           {testResult}
         </div>
       )}
@@ -319,7 +322,7 @@ function TestableRow({ label, icon, slotKey, provider, model, onProviderChange, 
         <select value={provider} onChange={e => onProviderChange(e.target.value)} style={{ ...S, minWidth: 160 }}>
           {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <input value={model} onChange={e => onModelChange(e.target.value)} placeholder="e.g. gpt-4o" style={{ ...I, flex: 1 }} />
+        <input value={model} onChange={e => onModelChange(e.target.value)} placeholder="例如 gpt-4o" style={{ ...I, flex: 1 }} />
       </div>
     </div>
   );

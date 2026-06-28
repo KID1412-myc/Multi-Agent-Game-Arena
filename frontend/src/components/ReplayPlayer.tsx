@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useArenaStore } from '../store/arenaStore';
 import { ArenaLayout } from './ArenaLayout';
-import { Play, Pause, SkipBack, SkipForward, X, FastForward, Trash2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, X, FastForward, Trash2, Sun, Moon } from 'lucide-react';
 
 interface ReplayInfo {
   id: string; game_id: string; game_name: string; timestamp: string; size: number;
@@ -21,8 +21,17 @@ export function ReplayPlayer() {
   const [sortBy, setSortBy] = useState('time-desc');
   const [allReplays, setAllReplays] = useState<ReplayInfo[]>([]);
   const [gameNames, setGameNames] = useState<Record<string, string>>({});
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  );
   const timerRef = useRef<number | null>(null);
   const store = useArenaStore;
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
 
   const loadList = useCallback(async () => {
     const [replayRes, gameRes] = await Promise.all([
@@ -186,7 +195,7 @@ export function ReplayPlayer() {
   if (!open) {
     return (
       <button onClick={() => { setOpen(true); loadList(); }}
-        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-hover)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
         <Play size={12} /> 回放
       </button>
     );
@@ -197,21 +206,36 @@ export function ReplayPlayer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
         <button onClick={() => { events.length > 0 ? backToList() : (stop(), setOpen(false)); }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={18} /></button>
         <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>回放</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-          <button onClick={() => {
-              const target = Math.max(0, eventIdx - 2);
-              setEventIdx(target);
-              setPlaying(false);
-              replayTo(target - 1 >= 0 ? target - 1 : 0);
-            }}
-            style={btnStyle}><SkipBack size={14} /></button>
-          <button onClick={() => setPlaying(!playing)} style={btnStyle}>
-            {playing ? <Pause size={14} /> : <Play size={14} />}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+          <button onClick={toggleTheme} title={theme === 'light' ? '切换暗色模式' : '切换浅色模式'}
+            style={{ ...btnStyle, padding: '4px 6px' }}>
+            {theme === 'light' ? <Moon size={12} /> : <Sun size={12} />}
           </button>
-          <button onClick={() => setSpeed(s => s === 4 ? 1 : s * 2)}
-            style={{ ...btnStyle, fontWeight: 600, fontSize: 10 }}>
-            <FastForward size={14} /> {speed}x
-          </button>
+          {events.length > 0 && (
+            <>
+              <button onClick={() => {
+                  const target = Math.max(0, eventIdx - 2);
+                  setEventIdx(target);
+                  setPlaying(false);
+                  replayTo(target - 1 >= 0 ? target - 1 : 0);
+                }}
+                style={btnStyle} title="上一步"><SkipBack size={14} /></button>
+              <button onClick={() => setPlaying(!playing)} style={btnStyle} title={playing ? '暂停' : '播放'}>
+                {playing ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+              <button onClick={() => {
+                  setPlaying(false);
+                  const next = Math.min(eventIdx + 1, events.length - 1);
+                  replayTo(next);
+                  setEventIdx(next + 1);
+                }}
+                style={btnStyle} title="下一步"><SkipForward size={14} /></button>
+              <button onClick={() => setSpeed(s => s === 4 ? 1 : s * 2)}
+                style={{ ...btnStyle, fontWeight: 600, fontSize: 10 }}>
+                <FastForward size={14} /> {speed}x
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -234,18 +258,18 @@ export function ReplayPlayer() {
       )}
 
       {events.length === 0 ? (
-        <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: 16, background: 'var(--bg-root)' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
             <h3 style={{ fontSize: 14, color: 'var(--text-primary)' }}>选择回放文件</h3>
             <select value={filterGame} onChange={e => { setFilterGame(e.target.value); }}
-              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
               <option value="">全部游戏</option>
               {[...new Set(allReplays.map(r => r.game_id))].map(gid => (
                 <option key={gid} value={gid}>{gameNames[gid] || gid}</option>
               ))}
             </select>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+              style={{ fontSize: 11, padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
               <option value="time-desc">最新优先</option>
               <option value="time-asc">最早优先</option>
               <option value="name">按游戏名</option>
@@ -280,7 +304,7 @@ export function ReplayPlayer() {
             };
             return (
               <div key={r.id}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 4, background: selectedIds.has(r.id) ? 'var(--color-primary-soft)' : 'var(--bg-surface)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center' }}>
+                style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 4, background: selectedIds.has(r.id) ? 'var(--color-primary-soft)' : 'var(--bg-hover)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center' }}>
                 <input type="checkbox" checked={selectedIds.has(r.id)} onChange={() => toggleSelect(r.id)}
                   onClick={e => e.stopPropagation()}
                   style={{ marginRight: 8, accentColor: 'var(--color-primary)', flexShrink: 0 }} />
