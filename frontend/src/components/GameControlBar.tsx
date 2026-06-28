@@ -3,6 +3,7 @@ import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward, BookOpen } f
 import { useArenaStore } from '../store/arenaStore';
 import { ModelSettings } from './ModelSettings';
 import { RuleModal } from './RuleModal';
+import { ReplayPlayer } from './ReplayPlayer';
 
 interface Props {
   connected: boolean;
@@ -24,7 +25,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
   const isRunning = gameStatus === 'running';
   const isPaused = gameStatus === 'paused';
   const isRoundPaused = gameStatus === 'round_paused';
-  const isActive = isRunning || isPaused || isRoundPaused;
+  const isActive = isRunning || isPaused || isRoundPaused || gameStatus === 'finished';
 
   return (
     <div style={{
@@ -32,7 +33,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v2.1.5</span></span>
+      <span style={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.5px' }}>MAGA <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400 }}>v2.2.0</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#666' }}>
@@ -119,6 +120,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         </button>
 
         <ModelSettings gameId={selectedGameId} disabled={isActive} />
+        <ReplayPlayer />
 
         {showRules && (
           <RuleModal

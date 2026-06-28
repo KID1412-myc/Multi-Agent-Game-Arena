@@ -1,5 +1,3 @@
-import { useArenaStore } from '../store/arenaStore';
-
 interface PlayerInfo {
   id: string; name: string; role: string; icon?: string;
   is_alive?: boolean; side?: string; points?: number;
@@ -10,11 +8,12 @@ interface Props {
   winnerName: string | null;
   ranking: { name: string; score: number }[];
   extra: Record<string, any> | null;
+  onClose: () => void;
 }
 
 const medalIcons = ['🥇', '🥈', '🥉'];
 
-export function GameOverModal({ winnerName, ranking, extra }: Props) {
+export function GameOverModal({ winnerName, ranking, extra, onClose }: Props) {
   const gameType = extra?.game_type as string | undefined;
   const players: PlayerInfo[] = extra?.players || [];
 
@@ -36,7 +35,7 @@ export function GameOverModal({ winnerName, ranking, extra }: Props) {
       {gameType === 'loot_share' && renderLootShare(players)}
       {!gameType && renderDefault(ranking, winnerName)}
 
-      <button onClick={() => useArenaStore.getState().setGameStatus('idle')}
+      <button onClick={onClose}
         style={{ marginTop: 12, padding: '4px 20px', fontSize: 12, border: '1px solid #ddd',
                  borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#666' }}>
         关闭

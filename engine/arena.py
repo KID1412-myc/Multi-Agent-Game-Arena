@@ -124,6 +124,7 @@ def load_game_config(game_id: str, games_dir: str = "games") -> GameConfig:
             name=p.get("name", ""),
             model=p.get("model") or dp.get("model", "gpt-5.4"),
             provider=ModelProvider(p.get("provider") or dp.get("provider", "openai")),
+            is_human=p.get("is_human", False),
             secret_identity=p.get("secret_identity", ""),
             initial_resources=p.get("initial_resources", {}),
         ))
@@ -277,6 +278,9 @@ class Arena:
         self._errors: list[str] = []
         self._start_time: float = 0.0
         self._total_tokens: int = 0
+        # 回放录制
+        self._replay_events: list[dict] = []
+        self._replay_start: float = 0.0
         self._stop_event = asyncio.Event()
         self._pause_event = asyncio.Event()
         self._pause_event.set()  # 初始状态：不暂停（event 已 set = 可以通行）
@@ -366,6 +370,8 @@ class Arena:
         """
         logger.info(f"🎮 MAGA Arena 启动: {self.game_id}")
         self._start_time = time.monotonic()
+        self._replay_start = time.monotonic()
+        self._replay_events = []
 
         try:
             # 1. 初始化
@@ -574,17 +580,16 @@ class Arena:
             await self.hooks.on_game_end(ctx, winner_id)
 
             duration = time.monotonic() - self._start_time
-
             result = ArenaResult(
                 game_id=self.game_id,
                 game_name=ctx.game_config.name,
                 winner_id=winner_id,
-                winner_name=winner.name if winner else None,
+                winner_name=wname or None,
                 total_rounds_played=round_num,
                 final_state=ctx,
                 round_history=self._round_history,
                 total_tokens=self.router.stats["total_tokens"],
-                total_cost_usd=-1.0,  # TODO: 根据实际费率计算
+                total_cost_usd=-1.0,
                 duration_seconds=duration,
                 errors=self._errors,
             )
@@ -593,6 +598,29 @@ class Arena:
             return result
 
         finally:
+            # 回放保存放在 finally 中，确保即使结算发言阶段被停止也不会丢失
+            if self._replay_events:
+                try:
+                    import datetime as _dt
+                    import sys as _sys
+                    ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    if getattr(_sys, 'frozen', False):
+                        replay_dir = Path(_sys.executable).parent / "games" / self.game_id / "replays"
+                    else:
+                        replay_dir = Path("games") / self.game_id / "replays"
+                    replay_dir.mkdir(parents=True, exist_ok=True)
+                    replay_path = replay_dir / f"{ts}.json"
+                    replay_data = {
+                        "game_id": self.game_id,
+                        "game_name": self.config.name if self.config else "",
+                        "timestamp": ts,
+                        "events": self._replay_events,
+                    }
+                    with open(replay_path, "w", encoding="utf-8") as f:
+                        json.dump(replay_data, f, ensure_ascii=False)
+                    logger.info(f"📼 回放已保存: {replay_path}")
+                except Exception as e:
+                    logger.warning(f"回放保存失败: {e}")
             await self._teardown()
 
     # ── 初始化 ───────────────────────────────────────────────────
@@ -637,6 +665,7 @@ class Arena:
                 get_context_fn=self.memory.build_context_for_player,
                 game_id=self.game_id,
             )
+            agent._arena = self  # 注入 arena 引用（人类玩家需要用它发送事件）
             self.players[pdef.id] = agent
 
         # 9. 初始化游戏上下文
@@ -647,6 +676,7 @@ class Arena:
                 name=pdef.name,
                 model=pdef.model,
                 provider=pdef.provider,
+                is_human=pdef.is_human,
                 resources=dict(pdef.initial_resources),
                 is_alive=True,
             )
@@ -961,6 +991,12 @@ class Arena:
                 f"📢 第{verdict.round_number}轮全局动态: {verdict.global_narrative}"
             )
 
+    def resolve_human_input(self, player_id: str, speech: str, action: str):
+        """分发人类玩家输入到对应 Agent。"""
+        agent = self.players.get(player_id)
+        if agent:
+            agent.resolve_human_input(speech, action)
+
     # ── 事件推送 ─────────────────────────────────────────────────
 
     async def night_action(self, action: str, player_id: str, player_name: str,
@@ -976,11 +1012,17 @@ class Arena:
         })
 
     async def _emit(self, event_type: WSEventType, payload: dict[str, Any]) -> None:
-        """推送 WebSocket 事件"""
+        """推送 WebSocket 事件。同时录制回放数据。"""
+        event = WSEvent(event_type=event_type, payload=payload)
+        # 录制回放
+        if not self._headless:
+            self._replay_events.append({
+                "t": (time.monotonic() - self._replay_start) if self._replay_start else 0,
+                "type": event_type.value,
+                "payload": payload,
+            })
         if self._headless or self._event_callback is None:
             return
-
-        event = WSEvent(event_type=event_type, payload=payload)
         try:
             await self._event_callback(event)
         except Exception as e:

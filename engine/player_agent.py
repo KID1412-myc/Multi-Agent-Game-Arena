@@ -19,6 +19,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -91,6 +92,9 @@ class PlayerAgent:
         self._router = router
         self._get_context = get_context_fn
         self._game_id = game_id
+        self._arena = None  # 由 Arena._setup 注入
+        self._pending_future: asyncio.Future | None = None  # 人类玩家等待输入
+        self._human_submitted: bool = False  # 标记人类是否已提交（防 stop 抢跑）
         self.speech_only: bool = False  # True = 只发言不决定行动
         self.action_only: bool = False  # True = 极简决策模式（只问三选一，不走 CoT）
         self.quick_action_prompt: str | None = None  # 游戏自定义 action 提示（替代 DEV/DEF/LOOT）
@@ -100,16 +104,15 @@ class PlayerAgent:
 
     async def act(self, ctx: GameContext) -> CoTOutput:
         """
-        玩家行动主入口。
-
-        1. 构建完整 Prompt（System + 上下文 + CoT 指令）
-        2. 调用模型生成 CoT JSON
-        3. 解析并校验输出
-        4. 如果解析失败，自修复（重试一次）
+        玩家行动主入口。人类玩家通过前端输入，AI 通过 LLM 调用。
 
         Returns:
             CoTOutput: 结构化的玩家行动
         """
+        # 人类玩家：发射事件等待前端输入
+        if self.defn.is_human:
+            return await self._wait_for_human(ctx)
+
         # 极简决策模式：不发 CoT，只问一句话
         if self.action_only:
             return await self._act_quick(ctx)
@@ -157,6 +160,70 @@ class PlayerAgent:
             logger.error(f"玩家 {self.defn.name} 行动失败: {e}")
             # 回退：返回一个保守的默认行动
             return self._fallback_action(str(e))
+
+    async def _wait_for_human(self, ctx: GameContext) -> CoTOutput:
+        """人类玩家：发送事件到前端，等待用户提交输入。"""
+        from engine.schema import WSEventType
+        phase = "speech" if self.speech_only else ("action" if self.action_only else "full")
+        if self._arena:
+            await self._arena._emit(WSEventType.HUMAN_TURN, {
+                "player_id": self.defn.id,
+                "player_name": self.defn.name,
+                "phase": phase,
+            })
+        # 创建 Future，等待前端通过 WS 提交；同时监控停止信号
+        self._pending_future = asyncio.get_event_loop().create_future()
+        self._human_submitted = False  # 标记人类是否已提交（防止 stop 抢跑）
+        async def _check_stop():
+            while not self._pending_future.done():
+                if self._arena and self._arena._stop_event.is_set():
+                    # 给人类 1.5 秒缓冲时间提交输入，不立刻抢跑
+                    await asyncio.sleep(1.5)
+                    if not self._human_submitted:
+                        self._pending_future.set_result({"speech": "", "action": "", "stopped": True})
+                    return
+                await asyncio.sleep(0.5)
+        stop_task = asyncio.ensure_future(_check_stop())
+        try:
+            result = await self._pending_future
+        except Exception:
+            return self._fallback_action("人类玩家未响应")
+        finally:
+            stop_task.cancel()
+        # 被停止信号触发（带了 stopped 标记）
+        if result.get("stopped"):
+            return CoTOutput(
+                situation_assessment="（游戏已被管理员手动停止）",
+                internal_strategy="（游戏已被管理员手动停止）",
+                public_speech=".",
+                secret_action="",
+            )
+        speech = result.get("speech", "").strip()
+        action = result.get("action", "").strip()
+        # 防止空 speech 触发 CoTOutput 校验崩溃——用 "." 因为引擎会忽略它（不推送到看板）
+        if not speech:
+            speech = "."
+        try:
+            return CoTOutput(
+                situation_assessment="（人类玩家手动输入）",
+                internal_strategy="（人类玩家手动输入）",
+                public_speech=speech,
+                secret_action=action,
+            )
+        except Exception:
+            # CoTOutput 校验失败时的绝对兜底（正常不应走到这里）
+            return CoTOutput(
+                situation_assessment="（人类玩家输入兜底）",
+                internal_strategy="（人类玩家输入兜底）",
+                public_speech=speech if speech else ".",
+                secret_action="",
+            )
+
+    def resolve_human_input(self, speech: str, action: str):
+        """接收前端提交的人类输入，唤醒 _wait_for_human。"""
+        self._human_submitted = True
+        if self._pending_future and not self._pending_future.done():
+            self._pending_future.set_result({"speech": speech, "action": action})
 
     # ── Prompt 构建 ──────────────────────────────────────────────
 

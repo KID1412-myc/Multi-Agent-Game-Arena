@@ -20,7 +20,8 @@ def _env_path() -> Path:
     return Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=_env_path())
 
-from fastapi import FastAPI
+import json
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -28,7 +29,7 @@ from server.api import arena, events, games, models
 
 app = FastAPI(
     title="MAGA Arena API",
-    version="2.0.0",
+    version="2.2.0",
 )
 
 app.add_middleware(
@@ -43,6 +44,66 @@ app.include_router(games.router)
 app.include_router(arena.router)
 app.include_router(events.router)
 app.include_router(models.router)
+
+
+# ── 回放 API ──
+def _replay_games_root() -> Path:
+    """EXE 模式优先用持久目录"""
+    p = Path("games")
+    if getattr(_sys, 'frozen', False):
+        exe_games = Path(_sys.executable).parent / "games"
+        if exe_games.exists():
+            return exe_games
+    return p
+
+
+@app.get("/api/replays")
+async def list_replays(game_id: str = ""):
+    """列出所有回放文件，可按游戏筛选"""
+    replays = []
+    games_root = _replay_games_root()
+    pattern = f"{game_id}/replays/*.json" if game_id else "*/replays/*.json"
+    for f in sorted(games_root.glob(pattern), reverse=True):
+        try:
+            with open(f, "r", encoding="utf-8") as fp:
+                data = json.load(fp)
+            replays.append({
+                "id": str(f.relative_to(games_root)).replace("\\", "/"),
+                "game_id": data.get("game_id", ""),
+                "game_name": data.get("game_name", ""),
+                "timestamp": data.get("timestamp", ""),
+                "size": f.stat().st_size,
+            })
+        except Exception:
+            pass
+    return {"replays": replays[:50]}
+
+
+@app.get("/api/replays/{path:path}")
+async def get_replay(path: str):
+    """获取回放文件完整内容"""
+    games_root = _replay_games_root()
+    replay_path = games_root / path
+    if not replay_path.exists():
+        raise HTTPException(status_code=404, detail="回放文件不存在")
+    with open(replay_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@app.delete("/api/replays/{path:path}")
+async def delete_replay(path: str):
+    """删除指定回放文件"""
+    games_root = _replay_games_root()
+    replay_path = games_root / path
+    if not replay_path.exists():
+        raise HTTPException(status_code=404, detail="回放文件不存在")
+    # 安全检查：确保路径在 games 目录下，防止路径穿越攻击
+    try:
+        replay_path.resolve().relative_to(games_root.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="非法的文件路径")
+    replay_path.unlink()
+    return {"status": "deleted", "path": path}
 
 
 @app.get("/api/health")

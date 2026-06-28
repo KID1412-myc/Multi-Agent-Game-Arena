@@ -4,6 +4,7 @@ import { GameSelector } from './components/GameSelector';
 import { ArenaLayout } from './components/ArenaLayout';
 import { CyberBackground } from './components/CyberBackground';
 import { GameOverModal } from './components/GameOverModal';
+import { HumanInput } from './components/HumanInput';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useArenaStore } from './store/arenaStore';
 
@@ -12,7 +13,8 @@ export default function App() {
   const [needSetup, setNeedSetup] = useState(false);
   const [setupProviders, setSetupProviders] = useState<any[]>([]);
   const [setupForm, setSetupForm] = useState<Record<string, string>>({});
-  const { connected } = useWebSocket();
+  const [gameOverDismissed, setGameOverDismissed] = useState(false);
+  const { connected, ws } = useWebSocket();
   const gameStatus = useArenaStore((s) => s.gameStatus);
   const ctx = useArenaStore((s) => s.ctx);
   const setGameStatus = useArenaStore((s) => s.setGameStatus);
@@ -54,6 +56,7 @@ export default function App() {
 
   const handleStart = useCallback(async () => {
     if (!selectedGameId) return;
+    setGameOverDismissed(false);
     setGameStatus('loading');
     const body = assignMode === 'manual' && Object.keys(assignments).length > 0
       ? JSON.stringify({ assignments })
@@ -75,6 +78,7 @@ export default function App() {
   const handleStop = useCallback(async () => {
     await api('/api/arena/stop');
     setGameStatus('idle');
+    setGameOverDismissed(false);
     reset();
   }, [api, setGameStatus, reset]);
 
@@ -152,11 +156,13 @@ export default function App() {
         {gameStatus === 'idle' && <span style={{ fontSize: 11, color: '#bbb', marginLeft: 12 }}>Select a game and press Start</span>}
       </div>
 
-      {gameStatus === 'finished' && (
-        <GameOverModal winnerName={winnerName} ranking={ranking} extra={extra} />
+      {gameStatus === 'finished' && !gameOverDismissed && (
+        <GameOverModal winnerName={winnerName} ranking={ranking} extra={extra}
+          onClose={() => setGameOverDismissed(true)} />
       )}
 
       <ArenaLayout />
+      <HumanInput ws={ws} />
     </div>
   );
 }
