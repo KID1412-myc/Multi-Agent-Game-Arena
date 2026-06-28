@@ -98,6 +98,10 @@ const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: Re
     store.setGameStatus('error');
     alert(`引擎错误: ${msg}`);
   },
+
+  HUMAN_TURN: (payload) => {
+    window.dispatchEvent(new CustomEvent('human-turn', { detail: payload }));
+  },
 };
 
 export function useWebSocket() {
@@ -176,6 +180,7 @@ export function useWebSocket() {
 
   return {
     connected: useArenaStore((s) => s.connected),
+    ws: wsRef.current,
     reconnect: connect,
   };
 }

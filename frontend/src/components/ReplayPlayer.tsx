@@ -119,18 +119,18 @@ export function ReplayPlayer() {
   if (!open) {
     return (
       <button onClick={() => { setOpen(true); loadList(); }}
-        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+        style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
         <Play size={12} /> 回放
       </button>
     );
   }
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: '#fff', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 'var(--z-40)', background: 'var(--bg-root)', display: 'flex', flexDirection: 'column' }}>
       {/* 顶栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderBottom: '1px solid #eee', background: '#fafafa' }}>
-        <button onClick={() => { stop(); setOpen(false); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={18} /></button>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>📼 游戏回放</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
+        <button onClick={() => { stop(); setOpen(false); }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={18} /></button>
+        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>📼 游戏回放</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <button onClick={() => {
               const target = Math.max(0, eventIdx - 2);
@@ -149,21 +149,21 @@ export function ReplayPlayer() {
         </div>
       </div>
       {/* 进度条 */}
-      <div style={{ height: 4, background: '#eee', flexShrink: 0 }}>
-        <div style={{ height: '100%', width: `${progress}%`, background: '#f59e0b', transition: 'width 0.2s' }} />
+      <div style={{ height: 4, background: 'var(--bg-muted)', flexShrink: 0 }}>
+        <div style={{ height: '100%', width: `${progress}%`, background: 'var(--color-accent)', transition: 'width 0.2s' }} />
       </div>
 
       {events.length === 0 ? (
         /* 回放列表 */
         <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-          <h3 style={{ fontSize: 14, marginBottom: 8 }}>选择回放文件</h3>
+          <h3 style={{ fontSize: 14, marginBottom: 8, color: 'var(--text-primary)' }}>选择回放文件</h3>
           {replays.map(r => (
             <div key={r.id}
-              style={{ padding: '8px 12px', borderRadius: 6, cursor: 'pointer', marginBottom: 4, background: '#fafafa', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center' }}>
+              style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center' }}>
               <div onClick={() => loadReplay(r.id)} style={{ flex: 1 }}>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>{r.game_name}</span>
-                <span style={{ fontSize: 11, color: '#999', marginLeft: 8 }}>{r.timestamp}</span>
-                <span style={{ fontSize: 11, color: '#bbb', marginLeft: 8 }}>{(r.size / 1024).toFixed(0)} KB</span>
+                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{r.game_name}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 8 }}>{r.timestamp}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 8 }}>{(r.size / 1024).toFixed(0)} KB</span>
               </div>
               <button onClick={async (e) => {
                 e.stopPropagation();
@@ -171,17 +171,17 @@ export function ReplayPlayer() {
                 await fetch(`/api/replays/${encodeURIComponent(r.id)}`, { method: 'DELETE' });
                 loadList();
               }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', padding: '4px' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
                 title="删除回放">
                 <Trash2 size={14} />
               </button>
             </div>
           ))}
-          {replays.length === 0 && <p style={{ color: '#999', fontSize: 12 }}>暂无回放文件。每局游戏结束后自动保存。</p>}
+          {replays.length === 0 && <p style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>暂无回放文件。每局游戏结束后自动保存。</p>}
         </div>
       ) : (
-        /* 回放播放中——复用 ArenaLayout 渲染游戏画面 */
-        <div style={{ flex: 1, overflow: 'auto', background: '#f5f5f5' }}>
+        /* 回放播放中 */
+        <div style={{ flex: 1, overflow: 'auto', background: 'var(--bg-root)' }}>
           <ArenaLayout />
         </div>
       )}
@@ -190,6 +190,7 @@ export function ReplayPlayer() {
 }
 
 const btnStyle: React.CSSProperties = {
-  padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6,
-  background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2,
+  padding: '4px 8px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
+  background: 'var(--bg-surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2,
+  color: 'var(--text-secondary)',
 };

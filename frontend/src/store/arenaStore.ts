@@ -17,6 +17,9 @@ interface ArenaState {
   assignments: Record<string, string>;
   setAssignMode: (m: 'random' | 'manual') => void;
   setAssignments: (a: Record<string, string>) => void;
+  // 人类玩家等待中（禁止查看CoT）
+  humanWaiting: boolean;
+  setHumanWaiting: (v: boolean) => void;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -54,6 +57,8 @@ export const useArenaStore = create<ArenaState>((set) => ({
   assignments: {},
   setAssignMode: (m) => set({ assignMode: m }),
   setAssignments: (a) => set({ assignments: a }),
+  humanWaiting: false,
+  setHumanWaiting: (v) => set({ humanWaiting: v }),
   speechLog: [],
   selectedPlayerId: null,
   showCoT: false,
@@ -113,6 +118,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
       gameOverPayload: null,
       assignMode: 'random',
       assignments: {},
+      humanWaiting: false,
       speechLog: [],
       selectedPlayerId: null,
       showCoT: false,

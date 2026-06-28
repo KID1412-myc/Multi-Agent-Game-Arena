@@ -50,6 +50,15 @@ async def websocket_endpoint(ws: WebSocket):
                 # 未来可扩展：订阅特定玩家的事件
                 pass
 
+            elif msg_type == "human_input":
+                # 人类玩家提交输入
+                from server.api.arena import _current_arena
+                player_id = msg.get("player_id", "")
+                speech = msg.get("speech", "")
+                action = msg.get("action", "")
+                if _current_arena:
+                    _current_arena.resolve_human_input(player_id, speech, action)
+
             elif msg_type == "command":
                 # 未来可扩展：前端控制命令（暂停/加速等）
                 pass

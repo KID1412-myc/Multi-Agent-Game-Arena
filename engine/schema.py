@@ -197,6 +197,7 @@ class PlayerDef(BaseModel):
     name: str
     model: str
     provider: ModelProvider
+    is_human: bool = False
     secret_identity: str = Field(default="", description="秘密人设 / 隐藏目标")
     initial_resources: dict[str, float] = Field(default_factory=dict)
 
@@ -216,6 +217,7 @@ class PlayerState(BaseModel):
     model: str
     provider: ModelProvider
     resources: dict[str, float] = Field(default_factory=dict)
+    is_human: bool = False
     is_alive: bool = True
     is_current_speaker: bool = False
     is_thinking: bool = False
@@ -303,6 +305,7 @@ class WSEventType(str, Enum):
     GAME_OVER = "GAME_OVER"               # 游戏结束
     ENGINE_ERROR = "ENGINE_ERROR"         # 引擎级错误
     NIGHT_ACTION = "NIGHT_ACTION"         # 夜晚行动（狼人杀等游戏的暗牌操作展示）
+    HUMAN_TURN = "HUMAN_TURN"             # 轮到人类玩家行动
 
 
 class WSEvent(BaseModel):

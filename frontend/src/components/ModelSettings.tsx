@@ -175,22 +175,30 @@ export function ModelSettings({ gameId, disabled }: Props) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(cfg.players || []).map((p: any, i: number) => {
                   const slotKey = `p${i}`;
+                  const isHuman = p.is_human || false;
                   return (
-                    <div key={p.id} style={{ ...R, padding: '6px 8px', borderRadius: 8, background: '#fafafa', border: '1px solid #f0f0f0' }}>
+                    <div key={p.id} style={{ ...R, padding: '6px 8px', borderRadius: 8, background: '#fafafa', border: '1px solid #f0f0f0', opacity: isHuman ? 0.7 : 1 }}>
                       <span style={{ color: '#ccc', fontSize: 10, width: 16, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
                       <input value={p.name || ''} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], name: e.target.value }; setCfg({ ...cfg, players: pl }); }}
-                        style={{ ...I, width: 100, flexShrink: 0, border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, background: 'transparent' }} />
-                      <select value={p.provider || 'relay'} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], provider: e.target.value }; setCfg({ ...cfg, players: pl }); }}
-                        style={{ ...S, width: 90, fontSize: 11, flexShrink: 0 }}>
-                        {providers.map(pr => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
-                      </select>
-                      <input value={p.model || ''} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], model: e.target.value }; setCfg({ ...cfg, players: pl }); }}
-                        style={{ ...I, flex: 1, minWidth: 80 }} placeholder="model name" />
-                      <button onClick={() => testSlot(slotKey, p.provider || 'relay', p.model || 'gpt-4o')} disabled={!!testing[slotKey]}
-                        style={{ ...BTN(testing[slotKey] ? '#f5f5f5' : '#eff6ff', testing[slotKey] ? '#999' : '#3b82f6', testing[slotKey] ? '#e5e5e5' : '#bfdbfe'),
-                                 display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, padding: '3px 8px', flexShrink: 0 }}>
-                        <Wifi size={10} /> {testing[slotKey] ? '...' : 'Test'}
+                        style={{ ...I, width: 80, flexShrink: 0, border: 'none', borderBottom: '1px solid #eee', borderRadius: 0, background: 'transparent' }} />
+                      {/* AI / Human toggle */}
+                      <button onClick={() => { const pl = [...cfg.players]; pl[i] = { ...pl[i], is_human: !isHuman }; setCfg({ ...cfg, players: pl }); }}
+                        style={{ ...BTN(isHuman ? '#fef3c7' : '#eff6ff', isHuman ? '#d97706' : '#3b82f6', isHuman ? '#fcd34d' : '#bfdbfe'), fontSize: 10, padding: '2px 6px', flexShrink: 0 }}>
+                        {isHuman ? '👤 人类' : '🤖 AI'}
                       </button>
+                      {!isHuman && <>
+                        <select value={p.provider || 'relay'} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], provider: e.target.value }; setCfg({ ...cfg, players: pl }); }}
+                          style={{ ...S, width: 80, fontSize: 11, flexShrink: 0 }}>
+                          {providers.map(pr => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                        </select>
+                        <input value={p.model || ''} onChange={e => { const pl = [...cfg.players]; pl[i] = { ...pl[i], model: e.target.value }; setCfg({ ...cfg, players: pl }); }}
+                          style={{ ...I, flex: 1, minWidth: 60 }} placeholder="model" />
+                        <button onClick={() => testSlot(slotKey, p.provider || 'relay', p.model || 'gpt-4o')} disabled={!!testing[slotKey]}
+                          style={{ ...BTN(testing[slotKey] ? '#f5f5f5' : '#eff6ff', testing[slotKey] ? '#999' : '#3b82f6', testing[slotKey] ? '#e5e5e5' : '#bfdbfe'),
+                                   display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, padding: '3px 8px', flexShrink: 0 }}>
+                          <Wifi size={10} /> {testing[slotKey] ? '...' : 'Test'}
+                        </button>
+                      </>}
                       {testResults[slotKey] && (
                         <span style={{
                           fontSize: 10, flexShrink: 0, maxWidth: 200, wordBreak: 'break-all', lineHeight: 1.3,

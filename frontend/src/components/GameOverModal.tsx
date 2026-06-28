@@ -19,27 +19,34 @@ export function GameOverModal({ winnerName, ranking, extra, onClose }: Props) {
 
   return (
     <div style={{
-      position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-      zIndex: 9999, background: '#fff', borderRadius: 12, padding: 28,
-      minWidth: 340, maxWidth: 480, maxHeight: '85vh', overflow: 'auto',
-      border: '2px solid #f59e0b', boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
-      textAlign: 'center',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ fontSize: 36, marginBottom: 4 }}>🏆</div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 16 }}>
-        {renderTitle(gameType, extra, winnerName)}
-      </h2>
+      <div style={{
+        background: 'var(--glass-bg)', borderRadius: 'var(--radius-xl)', padding: 28,
+        minWidth: 340, maxWidth: 480, maxHeight: '85vh', overflow: 'auto',
+        border: '1px solid var(--glass-border)', boxShadow: 'var(--glass-shadow)',
+        backdropFilter: 'blur(var(--glass-blur))', WebkitBackdropFilter: 'blur(var(--glass-blur))',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 36, marginBottom: 4 }}>🏆</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+          {renderTitle(gameType, extra, winnerName)}
+        </h2>
 
-      {gameType === 'werewolf' && renderWerewolf(players, extra)}
-      {gameType === 'bomb_collar_v2' && renderBombCollar(players, extra)}
-      {gameType === 'loot_share' && renderLootShare(players)}
-      {!gameType && renderDefault(ranking, winnerName)}
+        {gameType === 'werewolf' && renderWerewolf(players, extra)}
+        {gameType === 'bomb_collar_v2' && renderBombCollar(players, extra)}
+        {gameType === 'loot_share' && renderLootShare(players)}
+        {!gameType && renderDefault(ranking, winnerName)}
 
-      <button onClick={onClose}
-        style={{ marginTop: 12, padding: '4px 20px', fontSize: 12, border: '1px solid #ddd',
-                 borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#666' }}>
-        关闭
-      </button>
+        <button onClick={onClose}
+          style={{ marginTop: 12, padding: '4px 20px', fontSize: 12, border: '1px solid var(--border-default)',
+                   borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          关闭
+        </button>
+      </div>
     </div>
   );
 }
@@ -66,24 +73,24 @@ function renderWerewolf(players: PlayerInfo[], extra: any) {
   return (
     <div style={{ textAlign: 'left', fontSize: 13 }}>
       {extra?.desc && (
-        <div style={{ marginBottom: 10, color: '#666', fontSize: 12, textAlign: 'center' }}>
+        <div style={{ marginBottom: 10, color: 'var(--text-secondary)', fontSize: 12, textAlign: 'center' }}>
           {extra.desc}
         </div>
       )}
-      <div style={{ marginBottom: 8, fontWeight: 600, color: '#dc2626' }}>🐺 狼人阵营</div>
+      <div style={{ marginBottom: 8, fontWeight: 600, color: '#DC2626' }}>🐺 狼人阵营</div>
       {wolves.map(p => (
         <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 8px' }}>
-          <span>{p.icon} {p.name} <span style={{ fontSize: 11, color: '#999' }}>{p.role}</span></span>
-          <span style={{ color: p.is_alive ? '#16a34a' : '#999' }}>{p.is_alive ? '存活' : '已淘汰'}</span>
+          <span>{p.icon} {p.name} <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{p.role}</span></span>
+          <span style={{ color: p.is_alive ? 'var(--status-alive)' : 'var(--text-tertiary)' }}>{p.is_alive ? '存活' : '已淘汰'}</span>
         </div>
       ))}
-      <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 600, color: '#2563eb' }}>
+      <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 600, color: '#2563EB' }}>
         🔮🧪🔫👤 好人阵营
       </div>
       {goods.map(p => (
         <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 8px' }}>
-          <span>{p.icon} {p.name} <span style={{ fontSize: 11, color: '#999' }}>{p.role}</span></span>
-          <span style={{ color: p.is_alive ? '#16a34a' : '#999' }}>{p.is_alive ? '存活' : '已淘汰'}</span>
+          <span>{p.icon} {p.name} <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{p.role}</span></span>
+          <span style={{ color: p.is_alive ? 'var(--status-alive)' : 'var(--text-tertiary)' }}>{p.is_alive ? '存活' : '已淘汰'}</span>
         </div>
       ))}
     </div>
@@ -94,27 +101,27 @@ function renderBombCollar(players: PlayerInfo[], extra: any) {
   const fraudName = extra?.fraudster_name || '?';
   return (
     <div style={{ textAlign: 'left', fontSize: 13 }}>
-      <div style={{ marginBottom: 8, color: '#666', fontSize: 12, textAlign: 'center' }}>
-        {extra?.reason}　|　欺诈师：<b style={{ color: '#dc2626' }}>{fraudName}</b>
-        {extra?.accuser_name ? <>　|　指认者：<b style={{ color: '#16a34a' }}>{extra.accuser_name}</b></> : null}
+      <div style={{ marginBottom: 8, color: 'var(--text-secondary)', fontSize: 12, textAlign: 'center' }}>
+        {extra?.reason}　|　欺诈师：<b style={{ color: '#DC2626' }}>{fraudName}</b>
+        {extra?.accuser_name ? <>　|　指认者：<b style={{ color: '#16A34A' }}>{extra.accuser_name}</b></> : null}
       </div>
       {players.map((p, i) => (
         <div key={p.id} style={{
           display: 'flex', justifyContent: 'space-between', padding: '3px 8px',
-          background: p.role === '欺诈师' ? '#fef2f2' : 'transparent',
-          borderRadius: 4, marginBottom: 1,
+          background: p.role === '欺诈师' ? '#FEF2F2' : 'transparent',
+          borderRadius: 'var(--radius-sm)', marginBottom: 1,
         }}>
           <span>
             <span style={{ fontWeight: p.role === '欺诈师' ? 700 : 400 }}>
               {p.name}
             </span>
-            <span style={{ fontSize: 11, color: p.role === '欺诈师' ? '#dc2626' : '#999', marginLeft: 4 }}>
+            <span style={{ fontSize: 11, color: p.role === '欺诈师' ? '#DC2626' : 'var(--text-tertiary)', marginLeft: 4 }}>
               {p.role === '欺诈师' ? '🎭 欺诈师' : '👤 平民'}
             </span>
           </span>
           <span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{p.points} 分</span>
-            <span style={{ marginLeft: 6, color: p.is_alive ? '#16a34a' : '#999', fontSize: 11 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.points} 分</span>
+            <span style={{ marginLeft: 6, color: p.is_alive ? 'var(--status-alive)' : 'var(--text-tertiary)', fontSize: 11 }}>
               {p.is_alive ? '存活' : '已淘汰'}
             </span>
           </span>
@@ -129,32 +136,32 @@ function renderLootShare(players: PlayerInfo[]) {
   return (
     <div style={{ textAlign: 'left', fontSize: 13 }}>
       {winners.length > 0 && (
-        <div style={{ marginBottom: 8, color: '#f59e0b', fontSize: 12, textAlign: 'center', fontWeight: 600 }}>
+        <div style={{ marginBottom: 8, color: '#D97706', fontSize: 12, textAlign: 'center', fontWeight: 600 }}>
           达成秘密目标：{winners.map(w => w.name).join('、')}
         </div>
       )}
       {players.map((p, i) => (
         <div key={p.id} style={{
           display: 'flex', justifyContent: 'space-between', padding: '3px 8px',
-          background: p.goal_met ? '#fffbeb' : 'transparent',
-          borderRadius: 4, marginBottom: 1,
+          background: p.goal_met ? '#FFFBEB' : 'transparent',
+          borderRadius: 'var(--radius-sm)', marginBottom: 1,
         }}>
           <span>
             <span style={{ fontWeight: p.goal_met ? 700 : 400 }}>
               {p.name}
             </span>
-            <span style={{ fontSize: 11, color: '#999', marginLeft: 4 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 4 }}>
               {p.identity} · {p.goal_name}
             </span>
           </span>
           <span>
-            {p.goal_met ? <span style={{ color: '#f59e0b', marginRight: 6 }}>✅</span> : <span style={{ color: '#ddd', marginRight: 6 }}>—</span>}
-            <span style={{ fontFamily: 'monospace' }}>{p.points} 分</span>
+            {p.goal_met ? <span style={{ color: '#D97706', marginRight: 6 }}>✅</span> : <span style={{ color: 'var(--border-default)', marginRight: 6 }}>—</span>}
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{p.points} 分</span>
           </span>
         </div>
       ))}
       {winners.length === 0 && (
-        <div style={{ color: '#999', textAlign: 'center', fontSize: 12 }}>无人达成秘密目标</div>
+        <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', fontSize: 12 }}>无人达成秘密目标</div>
       )}
     </div>
   );
@@ -168,12 +175,12 @@ function renderDefault(ranking: { name: string; score: number }[], winnerName: s
         <div key={i} style={{
           display: 'flex', justifyContent: 'space-between', padding: '4px 12px',
           fontSize: 13, fontWeight: r.name === ranking[0].name ? 700 : 400,
-          color: i === 0 ? '#f59e0b' : '#333',
-          background: i === 0 ? '#fffbeb' : 'transparent',
-          borderRadius: 4, marginBottom: 2,
+          color: i === 0 ? 'var(--color-accent)' : 'var(--text-primary)',
+          background: i === 0 ? '#FFFBEB' : 'transparent',
+          borderRadius: 'var(--radius-sm)', marginBottom: 2,
         }}>
           <span>{medalIcons[i] || i + 1} {r.name}</span>
-          <span style={{ fontFamily: 'monospace' }}>{r.score} 分</span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{r.score} 分</span>
         </div>
       ))}
     </div>

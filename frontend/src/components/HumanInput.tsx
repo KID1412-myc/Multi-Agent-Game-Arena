@@ -71,53 +71,60 @@ export function HumanInput({ ws }: Props) {
 
   return (
     <div style={{
-      position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-      zIndex: 9999, background: '#fff', borderRadius: 12, padding: 24,
-      minWidth: 380, maxWidth: 480,
-      border: '2px solid #f59e0b', boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 'var(--z-30)', background: 'var(--bg-overlay)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
-        轮到你了 —— {playerName} ({playerId})
-      </div>
-      {resources && <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{resources}</div>}
-      <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
-        {phase === 'speech' ? '💬 公开发言阶段' : phase === 'action' ? '🎯 行动阶段' : '💬 发言 + 行动'}
-      </div>
+      <div style={{
+        background: 'var(--glass-bg)', borderRadius: 'var(--radius-lg)', padding: 24,
+        minWidth: 380, maxWidth: 480,
+        border: '2px solid var(--status-human)', boxShadow: 'var(--glass-shadow)',
+        backdropFilter: 'blur(var(--glass-blur))', WebkitBackdropFilter: 'blur(var(--glass-blur))',
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+          轮到你了 —— {playerName} ({playerId})
+        </div>
+        {resources && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>{resources}</div>}
+        <div style={{ fontSize: 12, color: 'var(--status-human)', marginBottom: 8 }}>
+          {phase === 'speech' ? '💬 公开发言阶段' : phase === 'action' ? '🎯 行动阶段' : '💬 发言 + 行动'}
+        </div>
 
-      <textarea
-        value={speech}
-        onChange={e => setSpeech(e.target.value)}
-        placeholder="公开发言（所有玩家可见）..."
-        style={{
-          width: '100%', height: 80, padding: 8, fontSize: 13,
-          border: '1px solid #ddd', borderRadius: 6, resize: 'vertical',
-          fontFamily: 'system-ui',
-        }}
-        autoFocus
-      />
+        <textarea
+          value={speech}
+          onChange={e => setSpeech(e.target.value)}
+          placeholder="公开发言（所有玩家可见）..."
+          style={{
+            width: '100%', height: 80, padding: 8, fontSize: 13,
+            border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', resize: 'vertical',
+            fontFamily: 'var(--font-sans)', background: 'var(--bg-root)', color: 'var(--text-primary)',
+          }}
+          autoFocus
+        />
 
-      <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
-        {phase === 'action' || phase === 'full' ? '秘密行动（如 DEV / 刀-p3 / 投-p5 / 数字）：' : '秘密行动（可选）：'}
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+          {phase === 'action' || phase === 'full' ? '秘密行动（如 DEV / 刀-p3 / 投-p5 / 数字）：' : '秘密行动（可选）：'}
+        </div>
+        <input
+          value={action}
+          onChange={e => setAction(e.target.value)}
+          placeholder={phase === 'action' ? '如：刀-p3' : '可选'}
+          style={{
+            width: '100%', padding: '6px 8px', fontSize: 13,
+            border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
+            fontFamily: 'var(--font-mono)', marginTop: 4,
+            background: 'var(--bg-root)', color: 'var(--text-primary)',
+          }}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
+        />
+
+        <button onClick={submit} disabled={submitting}
+          style={{
+            marginTop: 12, width: '100%', padding: '10px', fontSize: 14, fontWeight: 600,
+            background: submitting ? '#FCD34D' : 'var(--status-human)', color: '#FFFFFF', border: 'none', borderRadius: 'var(--radius-md)',
+          }}>
+          {submitting ? '提交中...' : '提交'}
+        </button>
       </div>
-      <input
-        value={action}
-        onChange={e => setAction(e.target.value)}
-        placeholder={phase === 'action' ? '如：刀-p3' : '可选'}
-        style={{
-          width: '100%', padding: '6px 8px', fontSize: 13,
-          border: '1px solid #ddd', borderRadius: 6,
-          fontFamily: 'monospace', marginTop: 4,
-        }}
-        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
-      />
-
-      <button onClick={submit} disabled={submitting}
-        style={{
-          marginTop: 12, width: '100%', padding: '10px', fontSize: 14, fontWeight: 600,
-          background: submitting ? '#fcd34d' : '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: submitting ? 'default' : 'pointer',
-        }}>
-        {submitting ? '提交中...' : '提交'}
-      </button>
     </div>
   );
 }

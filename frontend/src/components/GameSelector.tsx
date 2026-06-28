@@ -26,6 +26,11 @@ export function GameSelector({ onSelect, disabled }: Props) {
       .finally(() => setLoading(false));
   }, []);
 
+  // 游戏开始后自动收回下拉列表
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   const selectedGame = games.find((g) => g.id === selected);
 
   return (

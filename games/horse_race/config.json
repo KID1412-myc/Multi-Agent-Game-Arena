@@ -1,92 +1,93 @@
 {
-  "_comment": "赛马博弈 — 6人6轮。选最少人选中的马，投它的人各+5。",
-  "game_id": "horse_race",
-  "name": "赛马博弈",
-  "version": "1.0",
-  "description": "6人选1-6号马，得票最少的马赢——投它的人各+5分。平票则均分。博弈核心：猜众人不选哪匹。",
-  "min_players": 6,
-  "max_players": 6,
-  "total_rounds": 6,
-  "mode": "sequential",
-  "language": "zh-CN",
-  "turn_timeout_seconds": 180,
-  "dm_model": "deepseek-v4-pro",
-  "dm_provider": "deepseek",
-  "resources": [
-    {
-      "id": "points",
-      "label": "积分",
-      "unit": "分",
-      "icon": "🐴"
-    }
-  ],
-  "players": [
-    {
-      "id": "p1",
-      "name": "ChatGPT",
-      "model": "gpt-5.5",
-      "provider": "relay",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    },
-    {
-      "id": "p2",
-      "name": "Claude",
-      "model": "claude-sonnet-4-6-r",
-      "provider": "relay",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    },
-    {
-      "id": "p3",
-      "name": "豆包",
-      "model": "doubao-seed-2-0-pro-260215",
-      "provider": "doubao",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    },
-    {
-      "id": "p4",
-      "name": "通义千问",
-      "model": "qwen3.7-plus",
-      "provider": "qwen",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    },
-    {
-      "id": "p5",
-      "name": "MiniMax",
-      "model": "minimax-m2.7",
-      "provider": "minimax",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    },
-    {
-      "id": "p6",
-      "name": "Gemini",
-      "model": "gemini-3.1-flash-lite-preview",
-      "provider": "relay",
-      "secret_identity": "你是赛马观众。根据直觉选择即可。",
-      "initial_resources": {
-        "points": 0
-      }
-    }
-  ],
-  "hooks": "hooks.py",
-  "state_machine": null,
-  "schema_override": null,
-  "locked": true,
-  "shuffle_order": true,
-  "two_phase": true,
-  "epilogue": true
+    "_comment": "赛马博弈 — 6人2轮（测试用）。选最少人选中的马，投它的人各+5。",
+    "game_id": "horse_race",
+    "name": "赛马博弈",
+    "version": "1.0",
+    "description": "6人选1-6号马，得票最少的马赢——投它的人各+5分。平票则均分。博弈核心：猜众人不选哪匹。",
+    "min_players": 6,
+    "max_players": 6,
+    "total_rounds": 1,
+    "mode": "sequential",
+    "language": "zh-CN",
+    "turn_timeout_seconds": 180,
+    "dm_model": "deepseek-v4-pro",
+    "dm_provider": "deepseek",
+    "resources": [
+        {
+            "id": "points",
+            "label": "积分",
+            "unit": "分",
+            "icon": "🐴"
+        }
+    ],
+    "players": [
+        {
+            "id": "p1",
+            "name": "ChatGPT",
+            "model": "gpt-5.5",
+            "provider": "relay",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            }
+        },
+        {
+            "id": "p2",
+            "name": "Claude",
+            "model": "claude-sonnet-4-6-r",
+            "provider": "relay",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            }
+        },
+        {
+            "id": "p3",
+            "name": "豆包",
+            "model": "doubao-seed-2-0-pro-260215",
+            "provider": "doubao",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            }
+        },
+        {
+            "id": "p4",
+            "name": "通义千问",
+            "model": "qwen3.7-plus",
+            "provider": "qwen",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            }
+        },
+        {
+            "id": "p5",
+            "name": "开发者",
+            "model": "minimax-m2.7",
+            "provider": "minimax",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            },
+            "is_human": true
+        },
+        {
+            "id": "p6",
+            "name": "Gemini",
+            "model": "gemini-3.1-flash-lite-preview",
+            "provider": "relay",
+            "secret_identity": "你是赛马观众。根据直觉选择即可。",
+            "initial_resources": {
+                "points": 0
+            }
+        }
+    ],
+    "hooks": "hooks.py",
+    "state_machine": null,
+    "schema_override": null,
+    "locked": false,
+    "shuffle_order": true,
+    "two_phase": true,
+    "epilogue": true
 }

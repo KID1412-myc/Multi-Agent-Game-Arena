@@ -32,6 +32,7 @@ export interface PlayerState {
   model: string;
   provider: string;
   resources: Record<string, number>;
+  is_human?: boolean;
   is_alive: boolean;
   is_current_speaker: boolean;
   is_thinking: boolean;
@@ -120,7 +121,8 @@ export type WSEventType =
   | 'PLAYER_ERROR'
   | 'GAME_OVER'
   | 'ENGINE_ERROR'
-  | 'NIGHT_ACTION';
+  | 'NIGHT_ACTION'
+  | 'HUMAN_TURN';
 
 export interface NightAction {
   action: string;       // wolf_chat | wolf_vote | seer_check | witch_action | wolf_kill | hunter_shoot

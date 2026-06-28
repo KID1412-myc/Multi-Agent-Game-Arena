@@ -1,0 +1,228 @@
+/* ================================================================
+   MAGA Arena — Design Tokens v2.2.0
+   风格：Light Glassmorphism + Swiss Minimalism
+   配色：B2B Service + SaaS General（浅色基底，无暗色）
+   基于 UI.md 设计系统 + ui-ux-pro-max 推理引擎
+   ================================================================ */
+
+/* ── 浅色模式（唯一模式） ──────────────────────────────────── */
+:root {
+  /* 背景层级 */
+  --bg-root:       #F8FAFC;
+  --bg-surface:    #FFFFFF;
+  --bg-elevated:   #FFFFFF;
+  --bg-hover:      #F1F5F9;
+  --bg-active:     #EFF6FF;
+  --bg-overlay:    rgba(15, 23, 42, 0.35);
+  --bg-muted:      #F1F5F9;
+
+  /* 玻璃态（Glassmorphism 微质感） */
+  --glass-bg:      rgba(255, 255, 255, 0.85);
+  --glass-border:  rgba(0, 0, 0, 0.06);
+  --glass-blur:    12px;
+  --glass-shadow:  0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* 文字层级 */
+  --text-primary:    #0F172A;
+  --text-secondary:  #475569;
+  --text-tertiary:   #94A3B8;
+  --text-on-brand:   #FFFFFF;
+  --text-link:       #2563EB;
+
+  /* 品牌色（SaaS General + B2B Service 融合） */
+  --color-primary:        #2563EB;
+  --color-primary-hover:  #1D4ED8;
+  --color-primary-soft:   #DBEAFE;
+  --color-secondary:      #6366F1;
+  --color-secondary-soft: #E0E7FF;
+  --color-accent:         #EA580C;
+  --color-accent-soft:    #FFF7ED;
+  --color-success:        #16A34A;
+  --color-success-soft:   #DCFCE7;
+  --color-warning:        #F59E0B;
+  --color-warning-soft:   #FEF3C7;
+  --color-danger:         #DC2626;
+  --color-danger-soft:    #FEF2F2;
+  --color-info:           #0EA5E9;
+  --color-info-soft:      #E0F2FE;
+  --color-neutral:        #64748B;
+
+  /* 阵营色（游戏内语义） */
+  --faction-wolf:      #DC2626;
+  --faction-villager:  #2563EB;
+  --faction-neutral:   #7C3AED;
+  --faction-fraud:     #F43F5E;
+
+  /* 状态色 */
+  --status-alive:     #16A34A;
+  --status-thinking:  #F59E0B;
+  --status-dead:      #CBD5E1;
+  --status-danger:    #DC2626;
+  --status-human:     #D97706;
+
+  /* 边框 */
+  --border-default:   #E2E8F0;
+  --border-light:     #F1F5F9;
+  --border-focus:     #2563EB;
+  --ring-focus:       rgba(37, 99, 235, 0.25);
+
+  /* 圆角 */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* 阴影（克制使用） */
+  --shadow-none: none;
+  --shadow-L1:   0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-L2:   0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-L3:   0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-L4:   0 8px 32px rgba(0, 0, 0, 0.10);
+
+  /* Z-Index 分层 */
+  --z-0:    0;
+  --z-10:   10;
+  --z-20:   20;
+  --z-30:   30;
+  --z-40:   40;
+  --z-50:   50;
+
+  /* 动效 */
+  --duration-instant: 100ms;
+  --duration-fast:    150ms;
+  --duration-normal:  250ms;
+  --duration-slow:    350ms;
+  --easing-default:   cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-enter:     cubic-bezier(0, 0, 0.2, 1);
+  --easing-exit:      cubic-bezier(0.4, 0, 1, 1);
+
+  /* 间距（供参考，组件内用内联或 Tailwind） */
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   12px;
+  --space-lg:   16px;
+  --space-xl:   20px;
+  --space-2xl:  24px;
+  --space-3xl:  32px;
+  --space-4xl:  48px;
+
+  /* 字体 */
+  --font-sans:  'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+
+  /* 字重快捷 */
+  --weight-light:  300;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold:   700;
+}
+
+/* ── 暗色模式（柔和石板灰，非纯黑）─────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-root:       #1E293B;
+    --bg-surface:    #334155;
+    --bg-elevated:   #334155;
+    --bg-hover:      #475569;
+    --bg-active:     #1E3A5F;
+    --bg-overlay:    rgba(0, 0, 0, 0.50);
+    --bg-muted:      #334155;
+
+    --glass-bg:      rgba(51, 65, 85, 0.85);
+    --glass-border:  rgba(255, 255, 255, 0.08);
+    --glass-shadow:  0 8px 32px rgba(0, 0, 0, 0.30);
+
+    --text-primary:    #F1F5F9;
+    --text-secondary:  #94A3B8;
+    --text-tertiary:   #64748B;
+    --text-on-brand:   #FFFFFF;
+    --text-link:       #60A5FA;
+
+    --color-primary-soft:   #1E3A5F;
+    --color-secondary-soft: #2E1065;
+    --color-accent-soft:    #431407;
+    --color-success-soft:   #14532D;
+    --color-warning-soft:   #451A03;
+    --color-danger-soft:    #450A0A;
+    --color-info-soft:      #0C4A6E;
+
+    --border-default:   #475569;
+    --border-light:     #334155;
+    --border-focus:     #3B82F6;
+    --ring-focus:       rgba(59, 130, 246, 0.30);
+
+    --shadow-L1:   0 1px 2px rgba(0, 0, 0, 0.20);
+    --shadow-L2:   0 2px 8px rgba(0, 0, 0, 0.30);
+    --shadow-L3:   0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-L4:   0 8px 32px rgba(0, 0, 0, 0.40);
+
+    --status-alive:     #22C55E;
+    --status-thinking:  #FBBF24;
+    --status-dead:      #64748B;
+
+    --faction-wolf:      #EF4444;
+    --faction-villager:  #60A5FA;
+  }
+}
+
+/* ── 全局基础样式 ────────────────────────────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-root);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-normal);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 按钮基础交互 */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  user-select: none;
+  transition: opacity var(--duration-fast) var(--easing-default),
+              transform var(--duration-fast) var(--easing-default);
+}
+button:active {
+  transform: scale(0.97);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: var(--radius-full);
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
