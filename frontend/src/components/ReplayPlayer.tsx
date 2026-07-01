@@ -72,7 +72,6 @@ export function ReplayPlayer() {
     setLoading(false);
     setPlaying(true);
     store.getState().reset();
-    store.getState().setGameStatus('running');
   };
 
   const applyEvent = useCallback((ev: any) => {
@@ -121,7 +120,6 @@ export function ReplayPlayer() {
 
   const replayTo = useCallback((targetIdx: number) => {
     store.getState().reset();
-    store.getState().setGameStatus('running');
     for (let i = 0; i <= targetIdx && i < events.length; i++) {
       applyEvent(events[i]);
     }

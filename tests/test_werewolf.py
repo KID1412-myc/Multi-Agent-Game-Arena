@@ -222,6 +222,42 @@ class TestRoleAssignment:
         assert werewolf_hooks.witch_antidote is True
         assert werewolf_hooks.witch_poison is True
 
+    def test_role_assignment_no_manual_runs(self, sample_player_states):
+        """无手动分配时 on_game_start 不抛异常，9 个角色全部分配。"""
+        from games.werewolf.hooks import WerewolfHooks
+        from engine.schema import GameConfig, GameContext, RoundState, PlayerDef, ModelProvider
+        from tests.conftest import MockMemory
+
+        hooks = WerewolfHooks()
+        hooks.arena = type('obj', (object,), {'_assignments': {}})()
+        hooks.memory = MockMemory()  # 防止 on_game_start 调用 add_private 炸掉
+        players_dict = {
+            p.id: p for p in sample_player_states
+        }
+        ctx = GameContext(
+            game_config=GameConfig(
+                game_id="test",
+                name="Test",
+                total_rounds=0,
+                mode="sequential",
+                players=[
+                    PlayerDef(id=p.id, name=p.name, model="test", provider=ModelProvider.OPENAI)
+                    for p in sample_player_states
+                ],
+            ),
+            round=RoundState(
+                round_number=1,
+                total_rounds=0,
+                players=players_dict,
+            ),
+        )
+        import asyncio
+        asyncio.run(hooks.on_game_start(ctx))
+        assert len(hooks.roles) == 9
+        # 验证角色分布正确
+        from games.werewolf.hooks import ROLES
+        assert list(hooks.roles.values()).count("狼人") == ROLES.count("狼人")
+
 
 # ── 投票平票 ────────────────────────────────────────────────
 

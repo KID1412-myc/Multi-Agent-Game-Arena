@@ -61,6 +61,24 @@ class WerewolfHooks(GameHooks):
             return  # 人类在场，夜晚全走弹窗，不推面板
         asyncio.ensure_future(self.arena.night_action(action, player_id, player_name, detail, target_id=target_id, round_num=round_num))
 
+    async def _notify_human_result(self, agent, result_text: str):
+        """向人类玩家推送神职行动结果弹窗，等待确认后继续。"""
+        if not agent or not agent.defn.is_human:
+            return
+        from engine.schema import WSEventType
+        await agent._arena._emit(WSEventType.HUMAN_TURN, {
+            "player_id": agent.defn.id,
+            "player_name": agent.defn.name,
+            "phase": "notify",
+            "context": result_text,
+        })
+        agent._human_submitted = False
+        agent._pending_future = asyncio.get_running_loop().create_future()
+        try:
+            await agent._pending_future
+        except Exception:
+            pass
+
     # ============================================================
     # 白天
     # ============================================================
@@ -82,6 +100,17 @@ class WerewolfHooks(GameHooks):
             self._dawn_msg = None
 
         # 发言
+        for p in alive:
+            agent = a.players.get(p.id)
+            if agent and agent.defn.is_human:
+                alive_names = "、".join(f"{ap.name}({ap.id})" for ap in alive)
+                agent.phase_label = "💬 白天讨论（所有玩家可见）"
+                agent.human_context = (
+                    f"现在是第{self.round_num}轮白天讨论阶段。"
+                    f"存活玩家：{alive_names}。"
+                    f"请发言（可以指控、辩护、分析、或说谎）。"
+                    f"格式：直接输入你的发言。用ID指代玩家（如'我怀疑p3是狼'）。"
+                )
         await a.collect_speeches(ctx, alive)
         speech_cots = a.save_speech_cots(ctx)
         ctx.round.public_log.append(f"☀️ 第{self.round_num}轮白天——讨论与投票")
@@ -194,6 +223,7 @@ class WerewolfHooks(GameHooks):
                 f"🐺 你是唯一存活的狼人。没有同伴可以私聊，你需要独自决定今晚的目标。")
 
         if len(wolves) >= 2:
+            wolf_chat_log: list[str] = []  # 本轮狼私聊记录，供人类狼看历史
             for w in wolves:
                 # ⏸️ 暂停检查：每只狼发言前检查，保证暂停及时生效
                 await a._wait_if_paused()
@@ -207,15 +237,21 @@ class WerewolfHooks(GameHooks):
                     wolf_names = "、".join(f"{w2.name}({w2.id})" for w2 in wolves if w2.id != w.id)
                     other_players = [p for p in alive if self.roles.get(p.id) != "狼人"]
                     other_names = "、".join(f"{p.name}({p.id})" for p in other_players)
+                    agent.phase_label = "🐺 狼群私聊（仅狼队友可见）"
                     hint = f"## 🐺 狼人私聊\n\n你的狼同伴：{wolf_names}\n可选目标（非狼）：{other_names}\n\n格式：直接输入你想说的话。用ID指代目标（如'我倾向刀p3'）。"
-                    self.memory.add_private(w.id, hint)
+                    # 注入已有的狼私聊历史（让人类狼看到前面队友的发言）
+                    if wolf_chat_log:
+                        hint += "\n\n## 已有狼群讨论\n" + "\n".join(wolf_chat_log)
+                    agent.human_context = hint
                     agent.speech_only = True
                     cot = await agent.act(ctx)
                     agent.speech_only = False
                     speech = cot.public_speech.strip()
                     if speech and speech != ".":
+                        log_entry = f"🐺 {w.name}({w.id})：{speech}"
                         for w2 in wolves:
-                            self.memory.add_private(w2.id, f"🐺 {w.name}({w.id})在狼群中说: {speech}")
+                            self.memory.add_private(w2.id, log_entry)
+                        wolf_chat_log.append(log_entry)
                         self._emit_night("wolf_chat", w.id, w.name, speech, round_num=self.round_num)
                     continue
 
@@ -249,7 +285,7 @@ class WerewolfHooks(GameHooks):
                             f"你的狼同伴：{wolf_names}\n"
                             f"可选目标（非狼玩家）：{other_names}\n\n"
                             f"这是狼队内部私聊，不会被好人听到。像真实共谋者一样说话——自然、直接、像在耳边低语。\n"
-                            f"讨论什么：谁最可疑、今晚刀谁、要不要刀自己人骗女巫解药。\n"
+                            f"讨论什么：谁最可疑、今晚刀谁、要不要刀自己人骗女巫解药、要不要空刀不杀。\n"
                             f"用ID指代目标（如'我倾向刀p3'，'p5发言太像预言家了'）。\n"
                             f"⛔ 禁止使用markdown、表格、代码块、<think>标签。就当你在发微信。"
                         )
@@ -267,8 +303,10 @@ class WerewolfHooks(GameHooks):
                         )
                         speech = resp.content.strip()
                         if speech:
+                            log_entry = f"🐺 {w.name}({w.id})：{speech}"
                             for w2 in wolves:
-                                self.memory.add_private(w2.id, f"🐺 {w.name}({w.id})在狼群中说: {speech}")
+                                self.memory.add_private(w2.id, log_entry)
+                            wolf_chat_log.append(log_entry)
                             self._emit_night("wolf_chat", w.id, w.name, speech, round_num=self.round_num)
 
 
@@ -287,7 +325,20 @@ class WerewolfHooks(GameHooks):
                 return
             agent = a.players.get(w.id)
             if agent:
-                agent.quick_action_prompt = f"[你是 {w.id}] 狼人杀桌游——选择今晚要刀的目标。≥2狼选同一目标即成功。回复 刀-pX（如 刀-p3）"
+                agent.phase_label = "🎯 选择今晚刀人目标"
+                # 人类狼：附上快捷刀人按钮（全部存活玩家，含自刀）
+                if agent.defn.is_human:
+                    agent.targets = [
+                        {"id": f"刀-{p.id}", "name": p.name, "label": f"刀 {p.name}({p.id})"}
+                        for p in alive
+                    ]
+                    agent.quick_actions = [
+                        {"value": "空刀", "label": "🔇 空刀（不杀人）"},
+                    ]
+                agent.quick_action_prompt = f"[你是 {w.id}] 狼人杀桌游——选择今晚要刀的目标。≥2狼选同一目标即成功，也可以空刀不杀。回复 刀-pX（如 刀-p3）或 空刀"
+                # 人类狼：附上刚才的狼群讨论记录，帮助决策
+                if agent.defn.is_human and wolf_chat_log:
+                    agent.quick_action_prompt += "\n\n## 狼群讨论记录\n" + "\n".join(wolf_chat_log)
                 agent.action_only = True
                 logger.info(f"▶ {w.name}（{w.id}）选择目标中...")
 
@@ -309,16 +360,16 @@ class WerewolfHooks(GameHooks):
                     logger.info(f"  🐺 {w.name}({w.id}) raw=[{raw_wolf[:120]}]")
                     pick = self._parse_pick(raw_wolf, alive)
 
-                    # 兜底：如果解析失败，随机选择存活玩家
+                    # 兜底：空刀或解析失败时视为不投票（不随机补刀，尊重玩家意图）
                     if not pick:
-                        candidates = [p.id for p in alive if p.is_alive and self.roles.get(p.id) != "狼人"]
-                        if candidates:
-                            pick = random.choice(candidates)
-                            logger.info(f"  ⚠️ {w.name} 解析失败，随机选择: {pick}")
+                        if "空刀" in raw_wolf:
+                            logger.info(f"  🔇 {w.name} 选择空刀，不杀人")
+                            self.memory.add_private(w.id, "🔇 你今晚选择空刀，不杀任何人。")
+                        else:
+                            logger.info(f"  ⚠️ {w.name} 解析失败，视为空刀: raw=[{raw_wolf[:120]}]")
                             self.memory.add_private(w.id,
                                 f"⚠️ 你的刀人目标未被系统识别（你的回复：{raw_wolf[:80]}）。"
-                                f"系统随机选了你今晚的目标：{ctx.round.players[pick].name}({pick})。"
-                                f"下次请使用正确格式：刀-pX（如 刀-p3）。")
+                                f"已视为空刀。下次请使用正确格式：刀-pX（如 刀-p3）或 空刀。")
 
                     if pick:
                         wolf_votes[pick] += 1
@@ -356,7 +407,18 @@ class WerewolfHooks(GameHooks):
         if seer and seer.is_alive:
             agent = a.players.get(seer.id)
             if agent:
-                agent.quick_action_prompt = f"[你是 {seer.id}] 选择查验目标。回复 验-pX（如 验-p5）"
+                # 人类玩家提示词加存活玩家列表
+                alive_list = "、".join(f"{p.name}({p.id})" for p in alive)
+                agent.phase_label = "🔮 查验玩家身份"
+                if agent.defn.is_human:
+                    agent.targets = [
+                        {"id": f"验-{p.id}", "name": p.name, "label": f"验 {p.name}({p.id})"}
+                        for p in alive if p.id != seer.id
+                    ]
+                agent.quick_action_prompt = (
+                    f"[你是 {seer.id}] 存活玩家：{alive_list}\n"
+                    f"选择查验目标。回复 验-pX（如 验-p5）"
+                )
                 agent.action_only = True
                 logger.info(f"▶ {seer.name}（{seer.id}）查验中...")
 
@@ -387,6 +449,8 @@ class WerewolfHooks(GameHooks):
                         self._emit_night("seer_check", seer.id, seer.name,
                                          f"查验 {target_id}({tname}) → {label}",
                                          target_id=target_id, round_num=self.round_num)
+                        # 人类玩家：弹窗展示查验结果
+                        await self._notify_human_result(agent, seer_result)
                     else:
                         # 解析失败：通知预言家技能未生效，防止白天瞎编查验结果
                         fail_msg = (
@@ -396,6 +460,8 @@ class WerewolfHooks(GameHooks):
                         )
                         self.memory.add_private(seer.id, fail_msg)
                         logger.info(f"⚠️ 预言家 {seer.name}({seer.id}) 解析失败: raw=[{raw_seer[:120]}]")
+                        # 人类玩家：弹窗告知格式错误
+                        await self._notify_human_result(agent, fail_msg)
                 except Exception:
                     logger.info(f"✗ 预言家 {seer.name}({seer.id}) 查验失败（3次重试耗尽）")
                 agent.action_only = False
@@ -408,16 +474,29 @@ class WerewolfHooks(GameHooks):
             poison_str = "可用" if self.witch_poison else "已用完"
             agent = a.players.get(witch.id)
             if agent:
+                alive_list = "、".join(f"{p.name}({p.id})" for p in alive)
+                agent.phase_label = "🧪 使用药水"
+                if agent.defn.is_human:
+                    agent.targets = [
+                        {"id": f"毒-{p.id}", "name": p.name, "label": f"毒 {p.name}({p.id})"}
+                        for p in alive if p.id != witch.id
+                    ]
+                    agent.quick_actions = [
+                        {"value": "救", "label": "💚 使用解药救人"},
+                        {"value": "跳过", "label": "⏭️ 跳过不用药"},
+                    ]
                 if wolf_target:
                     victim_name = ctx.round.players[wolf_target].name
                     agent.quick_action_prompt = (
-                        f"[你是 {witch.id}] 今晚 {victim_name}({wolf_target}) 被杀了。"
+                        f"[你是 {witch.id}] 存活玩家：{alive_list}\n"
+                        f"今晚 {victim_name}({wolf_target}) 被杀了。"
                         f"解药({antidote_str})可救活他，毒药({poison_str})可毒杀一人。"
                         f"回复：救 或 毒-pX 或 跳过"
                     )
                 else:
                     agent.quick_action_prompt = (
-                        f"[你是 {witch.id}] 今晚无人被杀。毒药({poison_str})可毒杀一人。"
+                        f"[你是 {witch.id}] 存活玩家：{alive_list}\n"
+                        f"今晚无人被杀。毒药({poison_str})可毒杀一人。"
                         f"回复：毒-pX 或 跳过"
                     )
                 agent.action_only = True
@@ -443,7 +522,7 @@ class WerewolfHooks(GameHooks):
                     # 改进的女巫行动解析：支持多种表达
                     use_antidote = any(kw in raw for kw in ["救", "解药", "救命", "救他", "救人", "用药救"])
                     use_poison = any(kw in raw for kw in ["毒", "毒药", "下毒", "用毒", "毒杀"])
-                    skip_action = any(kw in raw for kw in ["跳过", "过", "不救", "不用", "跳", "不用药"])
+                    skip_action = any(kw in raw for kw in ["跳过", "过", "不救", "不用", "跳", "不用药", "不使用"])
 
                     if wolf_target and use_antidote and self.witch_antidote:
                         self.witch_antidote = False
@@ -453,9 +532,12 @@ class WerewolfHooks(GameHooks):
                                          f"使用解药，救活 {vname}({wolf_target})",
                                          target_id=wolf_target, round_num=self.round_num)
                         # 持久化：通知女巫药水已用
-                        self.memory.add_private(witch.id,
+                        antidote_msg = (
                             f"🧪 你今晚使用了【解药】，救活了 {vname}({wolf_target})。解药已用完。"
-                            f"毒药状态：{'可用' if self.witch_poison else '已用完'}。")
+                            f"毒药状态：{'可用' if self.witch_poison else '已用完'}。"
+                        )
+                        self.memory.add_private(witch.id, antidote_msg)
+                        await self._notify_human_result(agent, antidote_msg)
                         wolf_target = None
                     elif use_poison and self.witch_poison and not skip_action:
                         poison_target = self._parse_pick(raw, alive)
@@ -467,9 +549,12 @@ class WerewolfHooks(GameHooks):
                                              f"使用毒药，毒杀 {pname}({poison_target})",
                                              target_id=poison_target, round_num=self.round_num)
                             # 持久化：通知女巫药水已用
-                            self.memory.add_private(witch.id,
+                            poison_msg = (
                                 f"🧪 你今晚使用了【毒药】，毒杀了 {pname}({poison_target})。毒药已用完。"
-                                f"解药状态：{'可用' if self.witch_antidote else '已用完'}。")
+                                f"解药状态：{'可用' if self.witch_antidote else '已用完'}。"
+                            )
+                            self.memory.add_private(witch.id, poison_msg)
+                            await self._notify_human_result(agent, poison_msg)
                             # 毒药致死
                             p = ctx.round.players[poison_target]
                             if p.is_alive:
@@ -480,27 +565,39 @@ class WerewolfHooks(GameHooks):
                                 a.eliminate(ctx, poison_target)
                         elif not poison_target:
                             # 想毒人但目标解析失败
-                            self.memory.add_private(witch.id,
+                            poison_fail_msg = (
                                 f"⚠️ 你试图使用毒药，但目标ID解析失败。你的回复：{raw[:100]}\n"
-                                f"正确格式：毒-pX（如 毒-p7）。毒药未被消耗。")
+                                f"正确格式：毒-pX（如 毒-p7）。毒药未被消耗。"
+                            )
+                            self.memory.add_private(witch.id, poison_fail_msg)
+                            await self._notify_human_result(agent, poison_fail_msg)
                             logger.info(f"⚠️ 女巫毒人目标解析失败: raw=[{raw[:120]}]")
                     elif skip_action:
                         logger.info(f"  → 女巫选择跳过，不使用药水")
-                        self.memory.add_private(witch.id,
+                        skip_msg = (
                             f"🧪 你今晚选择跳过，不使用药水。"
-                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
+                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。"
+                        )
+                        self.memory.add_private(witch.id, skip_msg)
+                        await self._notify_human_result(agent, skip_msg)
                     else:
                         # 回复模棱两可，技能未生效，必须告知防止幻觉
                         logger.info(f"  → 女巫未明确行动，跳过")
-                        self.memory.add_private(witch.id,
+                        ambiguous_msg = (
                             f"⚠️ 你的回复未能被系统识别，今晚未执行任何药水操作。你的回复：{raw[:100]}\n"
                             f"正确格式：救（使用解药）、毒-pX（使用毒药）、跳过（不用药）。\n"
-                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
+                            f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。"
+                        )
+                        self.memory.add_private(witch.id, ambiguous_msg)
+                        await self._notify_human_result(agent, ambiguous_msg)
                 except Exception:
                     logger.info(f"✗ 女巫 {witch.name}({witch.id}) 行动失败（3次重试耗尽）")
-                    self.memory.add_private(witch.id,
+                    witch_err_msg = (
                         f"⚠️ 你的药水操作因网络错误未能执行。本晚你的药水未被消耗。"
-                        f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。")
+                        f"解药：{'可用' if self.witch_antidote else '已用完'} | 毒药：{'可用' if self.witch_poison else '已用完'}。"
+                    )
+                    self.memory.add_private(witch.id, witch_err_msg)
+                    await self._notify_human_result(agent, witch_err_msg)
                 agent.action_only = False
                 agent.quick_action_prompt = None
 
@@ -574,7 +671,20 @@ class WerewolfHooks(GameHooks):
             f"🔫 你是猎人（{hunter_id}），你已被淘汰！你可以开枪带走一名玩家，也可以选择不开枪（压枪）。回复 枪-pX 或 压枪")
         agent = a.players.get(hunter_id)
         if agent:
-            agent.quick_action_prompt = f"[你是 {hunter_id}] 你已被淘汰，身份是猎人。可以开枪带走一人，也可以压枪。回复 枪-pX 或 压枪"
+            agent.phase_label = "🔫 猎人开枪"
+            if agent.defn.is_human:
+                agent.targets = [
+                    {"id": f"枪-{p.id}", "name": p.name, "label": f"枪 {p.name}({p.id})"}
+                    for p in alive if p.id != hunter_id
+                ]
+                agent.quick_actions = [
+                    {"value": "压枪", "label": "🔇 压枪（不开枪）"},
+                ]
+            alive_list = "、".join(f"{p.name}({p.id})" for p in alive)
+            agent.quick_action_prompt = (
+                f"[你是 {hunter_id}] 你已被淘汰，身份是猎人。存活玩家：{alive_list}\n"
+                f"可以开枪带走一人，也可以压枪。回复 枪-pX 或 压枪"
+            )
             agent.action_only = True
             try:
                 # 延迟 + 重试，防 429
@@ -594,6 +704,8 @@ class WerewolfHooks(GameHooks):
                 if "压枪" in raw_hunter:
                     logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 选择压枪，不开枪")
                     self._emit_night("hunter_shoot", hunter_id, hunter.name, "选择压枪，不开枪", round_num=self.round_num)
+                    # 人类玩家：弹窗告知压枪成功
+                    await self._notify_human_result(agent, "🔫 你选择压枪，不开枪。你的猎人身份不会公布。")
                     # 压枪不公布猎人身份
                 else:
                     target = self._parse_pick(raw_hunter, alive)
@@ -604,6 +716,9 @@ class WerewolfHooks(GameHooks):
                             self._emit_night("hunter_shoot", hunter_id, hunter.name,
                                              f"开枪带走 {victim.name}({target})",
                                              target_id=target, round_num=self.round_num)
+                            # 人类玩家：弹窗告知开枪结果
+                            await self._notify_human_result(agent,
+                                f"🔫 你开枪带走了 {victim.name}({target})。你的猎人身份已公布。")
                             # 开枪了才公布——前端公告板 + 玩家记忆
                             msg = f"🔫 {hunter.name} 是猎人，开枪带走了 {victim.name}！"
                             ctx.round.public_log.append(msg)
@@ -617,13 +732,17 @@ class WerewolfHooks(GameHooks):
                         # 既不是压枪，也解析不出目标——格式错误，默认压枪，不公布身份
                         logger.info(f"  ⚠️ 猎人 {hunter.name}({hunter_id}) 格式错误，默认压枪: raw=[{raw_hunter[:120]}]")
                         self._emit_night("hunter_shoot", hunter_id, hunter.name, "格式错误，默认压枪", round_num=self.round_num)
-                        self.memory.add_private(hunter_id,
+                        hunter_fail_msg = (
                             f"⚠️ 你的开枪目标未能被系统识别（回复：{raw_hunter[:80]}）。已默认压枪。"
-                            f"正确格式：枪-pX（如 枪-p2）或 压枪。")
+                            f"正确格式：枪-pX（如 枪-p2）或 压枪。"
+                        )
+                        self.memory.add_private(hunter_id, hunter_fail_msg)
+                        await self._notify_human_result(agent, hunter_fail_msg)
             except Exception:
                 logger.info(f"  🔫 猎人 {hunter.name}({hunter_id}) 开枪失败（3次重试耗尽），默认压枪")
-                self.memory.add_private(hunter_id,
-                    f"⚠️ 你的开枪操作因网络错误未能执行，已默认压枪。")
+                hunter_err_msg = f"⚠️ 你的开枪操作因网络错误未能执行，已默认压枪。"
+                self.memory.add_private(hunter_id, hunter_err_msg)
+                await self._notify_human_result(agent, hunter_err_msg)
             agent.action_only = False
             agent.quick_action_prompt = None
 
@@ -647,6 +766,15 @@ class WerewolfHooks(GameHooks):
             f"📜 你（{player.id}）已被投票淘汰。请留下遗言——可以指控、揭露、虚张声势、或沉默。用ID指代玩家，如'我怀疑p3是狼'、'p5是预言家'。")
         agent = self.arena.players.get(player.id)
         if agent:
+            if agent.defn.is_human:
+                role = self.roles.get(player.id, "平民")
+                agent.phase_label = "💀 遗言"
+                agent.human_context = (
+                    f"## 💀 遗言\n\n你是 {player.name}({player.id})，身份 {role}。\n"
+                    f"你已被投票淘汰，这是你最后一次发言机会。\n"
+                    f"可以表明身份、分享信息、或指认狼人。\n"
+                    f"格式：直接输入你的遗言。用ID指代玩家。"
+                )
             agent.speech_only = True
 
             speech = None
@@ -703,7 +831,14 @@ class WerewolfHooks(GameHooks):
         manual_assign = (self.arena and getattr(self.arena, '_assignments', None)) or {}
         assigned = {pid: role for pid, role in manual_assign.items() if pid in pids}
         remaining_pids = [pid for pid in pids if pid not in assigned]
-        remaining_roles = [r for r in ROLES if r not in assigned.values()]
+        from collections import Counter
+        role_pool = Counter(ROLES)
+        for role in assigned.values():
+            if role_pool.get(role, 0) > 0:
+                role_pool[role] -= 1
+        remaining_roles = []
+        for role, count in role_pool.items():
+            remaining_roles.extend([role] * count)
         random.shuffle(remaining_roles)
         random.shuffle(pids)  # 保持随机排列
         # 先填手动

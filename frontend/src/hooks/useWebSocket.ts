@@ -9,7 +9,11 @@ import type { WSEvent, WSEventType } from '../types/arena';
 const handlers: Record<WSEventType, (payload: Record<string, unknown>, store: ReturnType<typeof useArenaStore.getState>) => void> = {
   GAME_INIT: (payload, store) => {
     if (payload.ctx) {
-      store.setCtx(payload.ctx as unknown as import('../types/arena').GameContext);
+      const ctx = payload.ctx as unknown as import('../types/arena').GameContext;
+      store.setCtx(ctx);
+      // 一次性检测：本局是否有人类玩家
+      const hasHuman = Object.values(ctx.round?.players || {}).some((p: any) => p.is_human);
+      store.setHasHumanPlayer(hasHuman);
     }
     store.setGameStatus('running');
     // 请求浏览器通知权限

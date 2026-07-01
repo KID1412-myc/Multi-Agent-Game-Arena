@@ -98,6 +98,10 @@ class PlayerAgent:
         self.speech_only: bool = False  # True = 只发言不决定行动
         self.action_only: bool = False  # True = 极简决策模式（只问三选一，不走 CoT）
         self.quick_action_prompt: str | None = None  # 游戏自定义 action 提示（替代 DEV/DEF/LOOT）
+        self.human_context: str | None = None  # hooks 在 act() 前设置，_wait_for_human 消费后清除
+        self.phase_label: str | None = None    # 前端弹窗场景标签（如"🐺 狼群私聊"），消费后清除
+        self.targets: list[dict] | None = None  # 可选目标按钮 [{id, name, label}, ...]
+        self.quick_actions: list[dict] | None = None  # 快捷行动按钮 [{value, label}, ...]
         self._history: list[dict[str, str]] = []  # 该玩家最近的消息历史
 
     # ── 公共 API ─────────────────────────────────────────────────
@@ -165,9 +169,15 @@ class PlayerAgent:
         """人类玩家：发送事件到前端，等待用户提交输入。"""
         from engine.schema import WSEventType
         phase = "speech" if self.speech_only else ("action" if self.action_only else "full")
-        # 构建人类玩家上下文提示：只取角色+行动格式，不含聊天记录
+        # 构建人类玩家上下文提示
+        # 优先级: quick_action_prompt（神职行动）> human_context（通用）> memory 提取（兜底）
         context_hint = ""
-        if self._arena and self._get_context:
+        if self.quick_action_prompt:
+            context_hint = self.quick_action_prompt
+        elif self.human_context:
+            context_hint = self.human_context
+            self.human_context = None  # 已消费，防止泄漏到下一轮
+        elif self._arena and self._get_context:
             try:
                 raw_ctx = self._get_context(self.defn.id)
                 # 只保留角色指引段落（以 ## 🎭 开头），去掉聊天历史
@@ -181,15 +191,25 @@ class PlayerAgent:
                         hint_lines.append(line)
                     if in_hint and line.strip() == '' and len(hint_lines) > 5:
                         break  # 角色指引结束后停止
-                context_hint = '\n'.join(hint_lines) if hint_lines else raw_ctx[:800]
+                context_hint = '\n'.join(hint_lines) if hint_lines else "（请根据你的角色和当前局势做出决定）"
             except Exception:
                 pass
         if self._arena:
+            # 传递 target 列表和快捷行动按钮
+            _targets = self.targets
+            self.targets = None
+            _actions = self.quick_actions
+            self.quick_actions = None
+            _label = self.phase_label
+            self.phase_label = None
             await self._arena._emit(WSEventType.HUMAN_TURN, {
                 "player_id": self.defn.id,
                 "player_name": self.defn.name,
                 "phase": phase,
+                "phase_label": _label or "",
                 "context": context_hint,
+                "targets": _targets or [],
+                "quick_actions": _actions or [],
             })
         # 创建 Future，等待前端通过 WS 提交；同时监控停止信号
         self._pending_future = asyncio.get_event_loop().create_future()
@@ -198,7 +218,7 @@ class PlayerAgent:
             while not self._pending_future.done():
                 if self._arena and self._arena._stop_event.is_set():
                     # 给人类 1.5 秒缓冲时间提交输入，不立刻抢跑
-                    await asyncio.sleep(1.5)
+                    await asyncio.sleep(5.0)
                     if not self._human_submitted:
                         self._pending_future.set_result({"speech": "", "action": "", "stopped": True})
                     return

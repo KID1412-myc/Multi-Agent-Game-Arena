@@ -420,6 +420,11 @@ class Arena:
 
                 logger.info(f"🔄 第 {round_num} 轮开始")
 
+                # 立即推送最新 ctx（含轮次号），避免前端停留在 GAME_INIT 的 round 0
+                await self._emit(WSEventType.STATE_UPDATE, {
+                    "ctx": ctx.model_dump(mode="json"),
+                })
+
                 # ── 阶段 1: 玩家行动 ──
                 await self._emit(WSEventType.ROUND_START, {
                     "round": round_num,
@@ -786,7 +791,34 @@ class Arena:
                 return (pid, "弃权")
             # ⏸️ 暂停检查：每个投票者投票前检查（并发模式下在各自 task 内检查）
             await self._wait_if_paused()
-            agent.quick_action_prompt = f"[你是 {pid}] 投票：{title}。只回复目标ID或弃权。"
+            agent.phase_label = f"🗳️ {title}"
+            if agent.defn.is_human:
+                # 构建存活玩家列表供参考
+                alive_names = "、".join(
+                    f"{pl.name}({pl_id})" for pl_id, pl in ctx.round.players.items() if pl.is_alive
+                )
+                # 构建可选目标列表
+                target_list = "\n".join(
+                    f"  • {t if isinstance(t, str) else f'{t.name}({t.id})'}" for t in targets
+                )
+                agent.human_context = (
+                    f"## 🗳️ {title}\n\n"
+                    f"存活玩家：{alive_names}\n\n"
+                    f"可选投票目标：\n{target_list}\n\n"
+                    f"回复格式：投-pX（如 投-p3）或 弃权。\n"
+                    f"用下方按钮快速选择，也可以手打。"
+                )
+                # 投票目标快捷按钮（投-pX）
+                agent.targets = [
+                    {"id": f"投-{t if isinstance(t, str) else t.id}",
+                     "name": t if isinstance(t, str) else t.name,
+                     "label": f"投 {t if isinstance(t, str) else f'{t.name}({t.id})'}"}
+                    for t in targets
+                ]
+                agent.quick_actions = [{"value": "弃权", "label": "⏭️ 弃权"}]
+            else:
+                # AI 玩家：简短 prompt 即可
+                agent.quick_action_prompt = f"[你是 {pid}] 投票：{title}。只回复目标ID或弃权。"
             agent.action_only = True
             try:
                 logger.info(f"▶ {p.name}（{pid}）投票中...")

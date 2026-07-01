@@ -98,7 +98,7 @@ export function PublicBoard() {
               </div>
               {entries.map((s, i) => {
                 const player = ctx?.round?.players[s.playerId];
-                const isLastWord = !player?.is_alive;
+                const isLastWord = s.content.startsWith('📜 遗言：');
                 const isHuman = player?.is_human;
                 return (
                 <motion.div

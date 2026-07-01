@@ -10,7 +10,7 @@ export function PlayerCard({ player, resources, index }: Props) {
   const showCoT = useArenaStore((s) => s.showCoT);
   const setSelectedPlayer = useArenaStore((s) => s.setSelectedPlayer);
   const ctx = useArenaStore((s) => s.ctx);
-  const hasHuman = Object.values(ctx?.round?.players || {}).some(p => p.is_human);
+  const hasHuman = useArenaStore((s) => s.hasHumanPlayer);
   const isActive = player.is_current_speaker;
   const isThinking = player.is_thinking;
   const isDead = !player.is_alive;

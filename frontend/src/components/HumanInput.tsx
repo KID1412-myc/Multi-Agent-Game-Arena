@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useArenaStore } from '../store/arenaStore';
 
@@ -18,6 +18,10 @@ export function HumanInput({ ws }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [context, setContext] = useState('');
   const [closing, setClosing] = useState(false);
+  const [phaseLabel, setPhaseLabel] = useState('');
+  const [targets, setTargets] = useState<{id: string; name: string; label: string}[]>([]);
+  const [quickActions, setQuickActions] = useState<{value: string; label: string}[]>([]);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 游戏停止或异常时自动关闭输入框
   useEffect(() => {
@@ -32,10 +36,19 @@ export function HumanInput({ ws }: Props) {
 
   useEffect(() => {
     const handler = (e: CustomEvent) => {
+      // 清除上一次提交的关闭定时器，防止新弹窗被旧定时器秒关
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setSubmitting(false);  // 防止旧提交状态污染新弹窗（否则按钮卡在"提交中..."）
       setPlayerId(e.detail.player_id);
       setPlayerName(e.detail.player_name);
       setPhase(e.detail.phase || 'speech');
       setContext(e.detail.context || '');
+      setPhaseLabel(e.detail.phase_label || '');
+      setTargets(e.detail.targets || []);
+      setQuickActions(e.detail.quick_actions || []);
       setSpeech('');
       setAction('');
       setWaiting(true);
@@ -47,6 +60,8 @@ export function HumanInput({ ws }: Props) {
     window.addEventListener('human-turn', handler as EventListener);
     return () => window.removeEventListener('human-turn', handler as EventListener);
   }, []);
+
+  const isNotify = phase === 'notify';
 
   if (!waiting) return null;
 
@@ -64,13 +79,14 @@ export function HumanInput({ ws }: Props) {
     }));
     // 先播放收缩动画，再关闭
     setClosing(true);
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
       setWaiting(false);
       setClosing(false);
       setSubmitting(false);
       setSpeech('');
       setAction('');
       useArenaStore.getState().setHumanWaiting(false);
+      closeTimerRef.current = null;
     }, 350);
   };
 
@@ -110,46 +126,97 @@ export function HumanInput({ ws }: Props) {
           </div>
         )}
         <div style={{ fontSize: 12, color: 'var(--status-human)', marginBottom: 8, fontWeight: 600 }}>
-          {phase === 'speech' ? '💬 公开发言（所有玩家可见）' : phase === 'action' ? '🎯 秘密行动（仅自己可见）' : '💬 发言 + 行动'}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
-          {phase === 'speech' ? '你的发言将对所有存活玩家公开' : '输入你的秘密行动，只有系统能看到'}
+          {phaseLabel || (isNotify ? '📋 行动结果' : phase === 'speech' ? '💬 发言' : phase === 'action' ? '🎯 秘密行动' : '💬 发言 + 行动')}
         </div>
 
-        <textarea
-          value={speech}
-          onChange={e => setSpeech(e.target.value)}
-          placeholder="公开发言（所有玩家可见）..."
-          style={{
-            width: '100%', height: 80, padding: 8, fontSize: 13,
-            border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', resize: 'vertical',
-            fontFamily: 'var(--font-sans)', background: 'var(--bg-root)', color: 'var(--text-primary)',
-          }}
-          autoFocus
-        />
+        {!isNotify && (
+          <>
+            {(targets.length > 0 || quickActions.length > 0) && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                {/* 指向性目标按钮（刀/验/毒/枪） */}
+                {targets.map(t => (
+                  <button key={t.id}
+                    onClick={() => setAction(t.id)}
+                    style={{
+                      padding: '3px 10px', fontSize: 11, fontWeight: 500,
+                      borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      border: '1px solid var(--border-default)', background: 'var(--bg-muted)',
+                      color: 'var(--text-primary)', transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-muted)')}
+                  >
+                    {t.label || `${t.name}(${t.id})`}
+                  </button>
+                ))}
+                {/* 分隔 */}
+                {targets.length > 0 && quickActions.length > 0 && (
+                  <span style={{ width: 4 }} />
+                )}
+                {/* 非指向性行动按钮（救/跳过/压枪）——不同底色 */}
+                {quickActions.map(a => (
+                  <button key={a.value}
+                    onClick={() => setAction(a.value)}
+                    style={{
+                      padding: '3px 10px', fontSize: 11, fontWeight: 600,
+                      borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      border: '1px solid var(--color-accent)', background: 'var(--color-accent-soft)',
+                      color: 'var(--color-accent)', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--color-accent)';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'var(--color-accent-soft)';
+                      e.currentTarget.style.color = 'var(--color-accent)';
+                    }}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
+              {phase === 'speech' ? '你的发言将对所有存活玩家公开' : '输入你的秘密行动，只有系统能看到'}
+            </div>
 
-        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
-          {phase === 'action' || phase === 'full' ? '秘密行动（如 DEV / 刀-p3 / 投-p5 / 数字）：' : '秘密行动（可选）：'}
-        </div>
-        <input
-          value={action}
-          onChange={e => setAction(e.target.value)}
-          placeholder={phase === 'action' ? '如：刀-p3' : '可选'}
-          style={{
-            width: '100%', padding: '6px 8px', fontSize: 13,
-            border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
-            fontFamily: 'var(--font-mono)', marginTop: 4,
-            background: 'var(--bg-root)', color: 'var(--text-primary)',
-          }}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
-        />
+            <textarea
+              value={speech}
+              onChange={e => setSpeech(e.target.value)}
+              placeholder="公开发言（所有玩家可见）..."
+              style={{
+                width: '100%', height: 80, padding: 8, fontSize: 13,
+                border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', resize: 'vertical',
+                fontFamily: 'var(--font-sans)', background: 'var(--bg-root)', color: 'var(--text-primary)',
+              }}
+              autoFocus
+            />
+
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+              {phase === 'action' || phase === 'full' ? '秘密行动（如 DEV / 刀-p3 / 投-p5 / 数字）：' : '秘密行动（可选）：'}
+            </div>
+            <input
+              value={action}
+              onChange={e => setAction(e.target.value)}
+              placeholder={phase === 'action' ? '如：刀-p3' : '可选'}
+              style={{
+                width: '100%', padding: '6px 8px', fontSize: 13,
+                border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)',
+                fontFamily: 'var(--font-mono)', marginTop: 4,
+                background: 'var(--bg-root)', color: 'var(--text-primary)',
+              }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
+            />
+          </>
+        )}
 
         <button onClick={submit} disabled={submitting}
           style={{
             marginTop: 12, width: '100%', padding: '10px', fontSize: 14, fontWeight: 600,
             background: submitting ? '#FCD34D' : 'var(--status-human)', color: '#FFFFFF', border: 'none', borderRadius: 'var(--radius-md)',
           }}>
-          {submitting ? '提交中...' : '提交'}
+          {submitting ? '提交中...' : isNotify ? '知道了' : '提交'}
         </button>
       </motion.div>
     </motion.div>

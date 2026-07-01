@@ -63,6 +63,64 @@ def ww_with_roles(sample_player_states):
     return hooks
 
 
+# ── 人类玩家模拟 fixtures ───────────────────────────────────
+
+class MockArena:
+    """最小桩：只提供 _emit 和 _stop_event，用于测试人类玩家路径。"""
+    def __init__(self):
+        import asyncio as _asyncio
+        self._stop_event = _asyncio.Event()
+        self._emit_done = _asyncio.Event()  # 每次 emit 后触发，消除竞态
+        self.emitted: list[tuple] = []
+
+    async def _emit(self, event_type, data):
+        self.emitted.append((str(event_type), dict(data)))
+        self._emit_done.set()
+
+
+class MockMemory:
+    """最小桩：提供 add_private / add_public / register_player 空操作。"""
+    def add_private(self, player_id, content): pass
+    def add_public(self, content): pass
+    def register_player(self, player_id): pass
+    def update_warm_summary(self, summary): pass
+
+
+@pytest.fixture
+def mock_arena():
+    return MockArena()
+
+
+@pytest.fixture
+def human_player_def():
+    """is_human=True 的 PlayerDef"""
+    return PlayerDef(id="p_human", name="人类测试", is_human=True,
+                     model="test", provider=ModelProvider.OPENAI)
+
+
+@pytest.fixture
+def human_agent(human_player_def, mock_arena):
+    """
+    is_human=True 的 PlayerAgent 工厂函数。
+    挂载 MockArena + 默认假 context 回调。
+    用法: agent = human_agent() 或 agent = human_agent(get_context_fn=custom_fn)
+    """
+    from engine.player_agent import PlayerAgent
+
+    def _make(get_context_fn=None):
+        if get_context_fn is None:
+            get_context_fn = lambda pid: "## 🎭 测试角色\n全玩家名单: p1,p2,p3\n"
+        agent = PlayerAgent(
+            player_def=human_player_def,
+            router=None,  # 人类玩家不调用 router
+            get_context_fn=get_context_fn,
+            game_id="test",
+        )
+        agent._arena = mock_arena
+        return agent
+    return _make
+
+
 # ── Arena fixtures ──────────────────────────────────────────
 
 @pytest.fixture

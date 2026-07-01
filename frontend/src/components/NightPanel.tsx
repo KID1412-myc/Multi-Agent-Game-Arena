@@ -13,10 +13,9 @@ const ACTION_ICONS: Record<string, string> = {
 
 export function NightPanel() {
   const nightLog = useArenaStore((s) => s.nightLog);
-  const ctx = useArenaStore((s) => s.ctx);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const hasHuman = Object.values(ctx?.round?.players || {}).some(p => p.is_human);
+  const hasHuman = useArenaStore((s) => s.hasHumanPlayer);
 
   useEffect(() => {
     if (scrollRef.current && !collapsed)

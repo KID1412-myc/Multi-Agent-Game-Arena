@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Square, Activity, Wifi, WifiOff, Pause, SkipForward, BookOpen, Sun, Moon } from 'lucide-react';
 import { useArenaStore } from '../store/arenaStore';
 import { ModelSettings } from './ModelSettings';
@@ -40,8 +40,26 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
+  const manualThemeRef = useRef(false);
+  const prevRoundRef = useRef(ctx?.round?.round_number);
+
+  const toggleTheme = () => {
+    setTheme(t => t === 'light' ? 'dark' : 'light');
+    manualThemeRef.current = true;  // 手动切换后本轮不再自动覆盖
+  };
+
   const gameStatus = useArenaStore((s) => s.gameStatus);
+
+  // 夜晚自动切暗色，白天切亮色（不锁定，玩家可手动改回）
+  useEffect(() => {
+    const round = ctx?.round?.round_number;
+    if (round == null || gameStatus !== 'running') return;
+    if (round !== prevRoundRef.current) {
+      prevRoundRef.current = round;
+      manualThemeRef.current = false;
+      setTheme(round % 2 === 1 ? 'dark' : 'light');
+    }
+  }, [ctx?.round?.round_number, gameStatus]);
   const isLoading = gameStatus === 'loading';
   const isRunning = gameStatus === 'running';
   const isPaused = gameStatus === 'paused';
@@ -54,13 +72,23 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
       padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 12,
       fontSize: 13, flexWrap: 'wrap',
     }}>
-      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '-0.01em' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>v2.3.1</span></span>
+      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '-0.01em' }}>MAGA <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>v2.4.0</span></span>
 
       {ctx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)' }}>
           <span>{ctx.game_config.name}</span>
           <span style={{ color: 'var(--border-default)' }}>|</span>
-          <span>Round {ctx.round.round_number}/{ctx.game_config.total_rounds}</span>
+          <span>Round {ctx.round.round_number}{ctx.game_config.total_rounds > 0 ? `/${ctx.game_config.total_rounds}` : ''}</span>
+          {/* 昼夜指示：奇数轮=夜晚，偶数轮=白天 */}
+          {ctx.round.round_number > 0 && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+              background: ctx.round.round_number % 2 === 1 ? 'var(--color-primary-soft)' : 'var(--color-warning-soft)',
+              color: ctx.round.round_number % 2 === 1 ? 'var(--color-primary)' : 'var(--color-warning)',
+            }}>
+              {ctx.round.round_number % 2 === 1 ? '🌙 夜晚' : '☀️ 白天'}
+            </span>
+          )}
           {isPaused && <span style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>已暂停</span>}
           {isRoundPaused && <span style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600 }}>轮间等待</span>}
         </div>
@@ -148,7 +176,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         </button>
 
         <ModelSettings gameId={selectedGameId} disabled={isActive} />
-        {!isActive && <ReplayPlayer />}
+        <ReplayPlayer />
 
         {showReadme && (
           <ReadmeModal onClose={() => setShowReadme(false)} />

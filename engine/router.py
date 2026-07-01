@@ -325,6 +325,10 @@ class ModelRouter:
         else:
             choice = completion.choices[0]
             content = choice.message.content if hasattr(choice, 'message') and choice.message else ""
+            # 防御：部分 API 代理可能错误返回 SSE 流式裸数据
+            if content and ('"object":"chat.completion.chunk"' in content or 'data: [DONE]' in content):
+                logger.warning(f"  ⚠️ {req.provider.value} 返回了流式 SSE 裸数据，视为空响应")
+                content = ""
             finish_reason = getattr(choice, 'finish_reason', 'stop') or "stop"
             input_tokens = completion.usage.prompt_tokens if completion.usage else 0
             output_tokens = completion.usage.completion_tokens if completion.usage else 0

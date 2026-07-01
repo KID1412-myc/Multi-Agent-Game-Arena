@@ -70,6 +70,23 @@ async def run_game(game_id: str, background_tasks: BackgroundTasks, body: dict =
         assignments = body.get("assignments")
         if assignments:
             arena._assignments = assignments
+    # 兜底：前端未传时，从 assignments.json 自动加载（防止 store 时序问题）
+    if not getattr(arena, '_assignments', None):
+        import json as _json
+        from pathlib import Path as _Path
+        import sys as _sys
+        games_root = _Path("games")
+        if getattr(_sys, 'frozen', False):
+            exe_games = _Path(_sys.executable).parent / "games"
+            if exe_games.exists():
+                games_root = exe_games
+        assign_path = games_root / game_id / "assignments.json"
+        if assign_path.exists():
+            with open(assign_path, "r", encoding="utf-8") as _f:
+                saved = _json.load(_f)
+            if saved:
+                arena._assignments = saved
+                logger.info(f"📋 从 {assign_path} 加载了角色分配: {saved}")
     _current_arena = arena
 
     async def run_in_background():

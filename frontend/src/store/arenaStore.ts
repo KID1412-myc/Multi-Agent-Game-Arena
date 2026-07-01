@@ -20,6 +20,9 @@ interface ArenaState {
   // 人类玩家等待中（禁止查看CoT）
   humanWaiting: boolean;
   setHumanWaiting: (v: boolean) => void;
+  // 全局标记：本局是否有人类玩家（GAME_INIT 时设置一次，不再变化）
+  hasHumanPlayer: boolean;
+  setHasHumanPlayer: (v: boolean) => void;
   // 发言历史
   speechLog: { playerId: string; playerName: string; content: string; round: number }[];
   // CoT 展示控制
@@ -59,6 +62,8 @@ export const useArenaStore = create<ArenaState>((set) => ({
   setAssignments: (a) => set({ assignments: a }),
   humanWaiting: false,
   setHumanWaiting: (v) => set({ humanWaiting: v }),
+  hasHumanPlayer: false,
+  setHasHumanPlayer: (v) => set({ hasHumanPlayer: v }),
   speechLog: [],
   selectedPlayerId: null,
   showCoT: false,
@@ -119,6 +124,7 @@ export const useArenaStore = create<ArenaState>((set) => ({
       assignMode: 'random',
       assignments: {},
       humanWaiting: false,
+      hasHumanPlayer: false,
       speechLog: [],
       selectedPlayerId: null,
       showCoT: false,
