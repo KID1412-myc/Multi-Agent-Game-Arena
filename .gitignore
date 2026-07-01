@@ -39,3 +39,6 @@ Thumbs.db
 CLAUDE.md
 UI.md
 .claudeignore
+
+# Werewolf bug reports & architecture notes (local only)
+werewolf_*.md

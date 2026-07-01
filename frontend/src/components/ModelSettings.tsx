@@ -98,7 +98,20 @@ export function ModelSettings({ gameId, disabled }: Props) {
   }, []);
 
   useEffect(() => {
-    if (open && gameId) { setMsg(''); fetch(`/api/games/${gameId}/config`).then(r => r.json()).then(d => setCfg(d)).catch(() => setMsg('加载失败')); }
+    if (open && gameId) {
+      setMsg('');
+      // 加载游戏配置 + 已保存的分配
+      Promise.all([
+        fetch('/api/games/' + gameId + '/config').then(r => r.json()),
+        fetch('/api/games/' + gameId + '/assignments').then(r => r.json()),
+      ]).then(([configData, assignData]) => {
+        setCfg(configData);
+        if (assignData && Object.keys(assignData).length > 0) {
+          setAssignments(assignData);
+          setAssignMode('manual');
+        }
+      }).catch(() => setMsg('加载失败'));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -106,9 +119,12 @@ export function ModelSettings({ gameId, disabled }: Props) {
     if (!cfg || !gameId) return;
     setSaving(true); setMsg('');
     try {
-      const res = await fetch(`/api/games/${gameId}/config`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dm_model: cfg.dm_model, dm_provider: cfg.dm_provider, players: cfg.players }) });
-      const data = await res.json();
-      setMsg(res.ok ? '已保存' : `错误：${data.detail}`);
+      const [cfgRes] = await Promise.all([
+        fetch('/api/games/' + gameId + '/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dm_model: cfg.dm_model, dm_provider: cfg.dm_provider, players: cfg.players }) }),
+        fetch('/api/games/' + gameId + '/assignments', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignments) }),
+      ]);
+      const data = await cfgRes.json();
+      setMsg(cfgRes.ok ? '已保存' : '错误：' + data.detail);
     } catch (e: any) { setMsg(`错误：${e.message}`); }
     setSaving(false);
   };

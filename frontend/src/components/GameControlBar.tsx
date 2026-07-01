@@ -148,7 +148,7 @@ export function GameControlBar({ connected, onStart, onStop, onPause, onResume, 
         </button>
 
         <ModelSettings gameId={selectedGameId} disabled={isActive} />
-        <ReplayPlayer />
+        {!isActive && <ReplayPlayer />}
 
         {showReadme && (
           <ReadmeModal onClose={() => setShowReadme(false)} />

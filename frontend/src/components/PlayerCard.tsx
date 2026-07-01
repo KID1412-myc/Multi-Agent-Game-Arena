@@ -70,20 +70,20 @@ export function PlayerCard({ player, resources, index }: Props) {
           fontFamily: 'var(--font-display)', letterSpacing: '-0.01em',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{player.name}</span>
-        {colorTag && (
+        {(!hasHuman || player.is_human) && colorTag && (
           <span style={{ fontSize: 9, fontWeight: 600, flexShrink: 0,
             color: colorTag === '红' ? 'var(--faction-wolf)' : colorTag === '蓝' ? 'var(--faction-villager)' : 'var(--color-primary)',
             background: 'var(--bg-muted)', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{colorTag}</span>
         )}
-        {fraudTag && (
+        {(!hasHuman || player.is_human) && fraudTag && (
           <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--faction-fraud)', flexShrink: 0,
             background: 'var(--color-danger-soft)', padding: '1px 5px', borderRadius: 'var(--radius-sm)' }}>{fraudTag}</span>
         )}
-        {seeTag && (
+        {!hasHuman && seeTag && (
           <span style={{ fontSize: 8, color: 'var(--text-tertiary)', flexShrink: 0 }}>{seeTag}</span>
         )}
         {isThinking && <span style={{ fontSize: 9, color: 'var(--status-thinking)', flexShrink: 0 }}>思考中</span>}
-        <span style={{ fontSize: 9, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 80 }}>{player.model}</span>
+        <span style={{ fontSize: 9, color: 'var(--text-tertiary)', fontFamily: player.is_human ? 'var(--font-sans)' : 'var(--font-mono)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 80 }}>{player.is_human ? '👤' : player.model}</span>
       </div>
 
       {/* Resources */}

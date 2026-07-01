@@ -165,11 +165,31 @@ class PlayerAgent:
         """人类玩家：发送事件到前端，等待用户提交输入。"""
         from engine.schema import WSEventType
         phase = "speech" if self.speech_only else ("action" if self.action_only else "full")
+        # 构建人类玩家上下文提示：只取角色+行动格式，不含聊天记录
+        context_hint = ""
+        if self._arena and self._get_context:
+            try:
+                raw_ctx = self._get_context(self.defn.id)
+                # 只保留角色指引段落（以 ## 🎭 开头），去掉聊天历史
+                lines = raw_ctx.split('\n')
+                hint_lines = []
+                in_hint = False
+                for line in lines:
+                    if '## 🎭' in line or '游戏声明' in line or '全玩家名单' in line:
+                        in_hint = True
+                    if in_hint:
+                        hint_lines.append(line)
+                    if in_hint and line.strip() == '' and len(hint_lines) > 5:
+                        break  # 角色指引结束后停止
+                context_hint = '\n'.join(hint_lines) if hint_lines else raw_ctx[:800]
+            except Exception:
+                pass
         if self._arena:
             await self._arena._emit(WSEventType.HUMAN_TURN, {
                 "player_id": self.defn.id,
                 "player_name": self.defn.name,
                 "phase": phase,
+                "context": context_hint,
             })
         # 创建 Future，等待前端通过 WS 提交；同时监控停止信号
         self._pending_future = asyncio.get_event_loop().create_future()

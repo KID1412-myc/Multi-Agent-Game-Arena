@@ -84,10 +84,11 @@ class TurnManager:
                 await on_thinking_start(player)
 
             action: Optional[CoTOutput] = None
+            timeout = None if getattr(player, 'is_human', False) else self.config.turn_timeout_seconds
             try:
                 action = await asyncio.wait_for(
                     action_callback(ctx, player),
-                    timeout=self.config.turn_timeout_seconds,
+                    timeout=timeout,
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"玩家 {player.name} 超时，执行默认被动行动")
@@ -128,10 +129,11 @@ class TurnManager:
                 await on_thinking_start(player)
 
             action: Optional[CoTOutput] = None
+            timeout = None if getattr(player, 'is_human', False) else self.config.turn_timeout_seconds
             try:
                 action = await asyncio.wait_for(
                     action_callback(ctx, player),
-                    timeout=self.config.turn_timeout_seconds,
+                    timeout=timeout,
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"玩家 {player.name} 超时，执行默认被动行动")

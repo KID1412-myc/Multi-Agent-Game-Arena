@@ -13,15 +13,18 @@ const ACTION_ICONS: Record<string, string> = {
 
 export function NightPanel() {
   const nightLog = useArenaStore((s) => s.nightLog);
+  const ctx = useArenaStore((s) => s.ctx);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const hasHuman = Object.values(ctx?.round?.players || {}).some(p => p.is_human);
 
   useEffect(() => {
     if (scrollRef.current && !collapsed)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [nightLog, collapsed]);
 
-  if (nightLog.length === 0) return null;
+  // 有人类玩家时夜晚完全隔离，不推面板
+  if (hasHuman || nightLog.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 8, flexShrink: 0 }}>

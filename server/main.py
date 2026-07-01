@@ -151,6 +151,29 @@ async def get_readme():
         return {"content": f.read()}
 
 
+# ── 角色分配持久化（EXE 模式不丢） ──
+@app.get("/api/games/{game_id}/assignments")
+async def get_assignments(game_id: str):
+    """获取游戏的角色分配配置"""
+    games_root = _replay_games_root()
+    path = games_root / game_id / "assignments.json"
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+@app.put("/api/games/{game_id}/assignments")
+async def save_assignments(game_id: str, body: dict):
+    """保存游戏的角色分配配置"""
+    games_root = _replay_games_root()
+    path = games_root / game_id / "assignments.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(body, f, ensure_ascii=False)
+    return {"status": "saved"}
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

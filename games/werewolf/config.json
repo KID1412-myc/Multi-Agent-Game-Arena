@@ -48,11 +48,12 @@
         },
         {
             "id": "p5",
-            "name": "ChatGPT2",
+            "name": "GOD",
             "model": "gpt-5.4",
             "provider": "relay",
             "secret_identity": "你是玩家。",
-            "initial_resources": {}
+            "initial_resources": {},
+            "is_human": true
         },
         {
             "id": "p6",

@@ -16,6 +16,7 @@ export function HumanInput({ ws }: Props) {
   const [action, setAction] = useState('');
   const [waiting, setWaiting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [context, setContext] = useState('');
   const [closing, setClosing] = useState(false);
 
   // 游戏停止或异常时自动关闭输入框
@@ -34,6 +35,7 @@ export function HumanInput({ ws }: Props) {
       setPlayerId(e.detail.player_id);
       setPlayerName(e.detail.player_name);
       setPhase(e.detail.phase || 'speech');
+      setContext(e.detail.context || '');
       setSpeech('');
       setAction('');
       setWaiting(true);
@@ -101,9 +103,17 @@ export function HumanInput({ ws }: Props) {
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
           轮到你了 —— {playerName} ({playerId})
         </div>
-        {resources && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>{resources}</div>}
-        <div style={{ fontSize: 12, color: 'var(--status-human)', marginBottom: 8 }}>
-          {phase === 'speech' ? '💬 公开发言阶段' : phase === 'action' ? '🎯 行动阶段' : '💬 发言 + 行动'}
+        {resources && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>{resources}</div>}
+        {context && (
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, padding: '8px 10px', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', maxHeight: 120, overflowY: 'auto', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {context}
+          </div>
+        )}
+        <div style={{ fontSize: 12, color: 'var(--status-human)', marginBottom: 8, fontWeight: 600 }}>
+          {phase === 'speech' ? '💬 公开发言（所有玩家可见）' : phase === 'action' ? '🎯 秘密行动（仅自己可见）' : '💬 发言 + 行动'}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
+          {phase === 'speech' ? '你的发言将对所有存活玩家公开' : '输入你的秘密行动，只有系统能看到'}
         </div>
 
         <textarea
